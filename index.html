@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VĂN UYỂN - Nơi chữ nghĩa nở hoa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* ==========================================================================
+       CSS VARIABLES & THEME (PASTEL AESTHETIC - KHU VƯỜN VĂN CHƯƠNG)
+       ========================================================================== */
+    :root {
+      --primary: #c3a6cb; /* Tím mộng mơ */
+      --primary-hover: #b08bb9;
+      --secondary: #e6d3e8; /* Tím nhạt */
+      --accent: #f0b5c1; /* Hồng phấn */
+      --bg-color: #fdfaf6; /* Kem sữa */
+      --card-bg: #ffffff;
+      --text-main: #5c4e4e; /* Nâu xám ấm */
+      --text-light: #8e8080;
+      --border-color: #f0e6e6;
+      --success: #a3c9a8; /* Xanh lá non */
+      --warning: #fce2a8; /* Vàng nắng */
+      --danger: #f5a9a9; /* Đỏ pastel */
+      
+      --font-heading: 'Quicksand', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --shadow-soft: 0 8px 24px rgba(92, 78, 78, 0.05);
+      --shadow-hover: 0 12px 32px rgba(92, 78, 78, 0.1);
+      --sidebar-width: 280px;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+      /* Floral Background Accent */
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(240, 181, 193, 0.05) 0%, transparent 20%),
+        radial-gradient(circle at 90% 90%, rgba(163, 201, 168, 0.05) 0%, transparent 20%);
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-color); }
+    ::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+    /* UTILITIES */
+    .font-heading { font-family: var(--font-heading); }
+    .text-center { text-align: center; }
+    .mt-1 { margin-top: 8px; } .mt-2 { margin-top: 16px; } .mt-3 { margin-top: 24px; } .mt-4 { margin-top: 32px; }
+    .mb-1 { margin-bottom: 8px; } .mb-2 { margin-bottom: 16px; } .mb-3 { margin-bottom: 24px; } .mb-4 { margin-bottom: 32px; }
+    .flex { display: flex; } .flex-col { display: flex; flex-direction: column; }
+    .items-center { align-items: center; } .justify-between { justify-content: space-between; } .justify-center { justify-content: center; }
+    .gap-2 { gap: 8px; } .gap-3 { gap: 16px; } .gap-4 { gap: 24px; }
+    .hidden { display: none !important; }
+    .w-full { width: 100%; }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      font-family: var(--font-heading); font-weight: 600; font-size: 1rem;
+      padding: 10px 24px; border-radius: var(--radius-lg);
+      cursor: pointer; border: none; outline: none;
+      transition: all 0.3s ease;
+      text-decoration: none; color: white;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary { background-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--primary-hover); box-shadow: var(--shadow-soft); }
+    .btn-secondary { background-color: var(--secondary); color: var(--text-main); }
+    .btn-secondary:hover { background-color: #d8c2da; box-shadow: var(--shadow-soft); }
+    .btn-accent { background-color: var(--accent); }
+    .btn-accent:hover { background-color: #e6a2b0; box-shadow: var(--shadow-soft); }
+    .btn-success { background-color: var(--success); }
+    .btn-danger { background-color: var(--danger); }
+    .btn-outline { background-color: transparent; border: 2px solid var(--primary); color: var(--primary); }
+    .btn-outline:hover { background-color: var(--primary); color: white; }
+    .btn-sm { padding: 6px 16px; font-size: 0.9rem; }
+
+    /* FORMS & INPUTS */
+    .input-group { margin-bottom: 16px; text-align: left; }
+    .input-group label { display: block; font-family: var(--font-heading); font-weight: 600; margin-bottom: 6px; color: var(--text-main); }
+    .input-control {
+      width: 100%; padding: 12px 16px; font-family: var(--font-body); font-size: 1rem;
+      border: 2px solid var(--border-color); border-radius: var(--radius-md);
+      background-color: var(--bg-color); color: var(--text-main);
+      transition: all 0.3s ease;
+    }
+    .input-control:focus { border-color: var(--primary); outline: none; background-color: white; box-shadow: 0 0 0 4px rgba(195,166,203,0.1); }
+    select.input-control { appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%235c4e4e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+    textarea.input-control { resize: vertical; min-height: 100px; }
+
+    /* LAYOUT: SIDEBAR & MAIN */
+    .app-container { display: flex; min-height: 100vh; }
+    
+    .sidebar {
+      width: var(--sidebar-width); background-color: var(--card-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+    }
+    .sidebar-header { padding: 32px 24px 24px; text-align: center; border-bottom: 1px solid var(--border-color); position: relative; }
+    /* Hoa lá leo ở góc sidebar */
+    .sidebar-header::before {
+      content: '🌿'; position: absolute; top: 10px; left: 10px; font-size: 1.5rem; opacity: 0.6; transform: rotate(-30deg);
+    }
+    .sidebar-header::after {
+      content: '🌸'; position: absolute; bottom: 10px; right: 10px; font-size: 1.5rem; opacity: 0.6; transform: rotate(30deg);
+    }
+    .sidebar-logo { font-family: var(--font-heading); font-size: 1.8rem; font-weight: 700; color: var(--primary); letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .sidebar-slogan { font-size: 0.9rem; font-style: italic; color: var(--text-light); margin-top: 4px; }
+    
+    .sidebar-user { padding: 20px 24px; display: flex; align-items: center; gap: 12px; background: rgba(230, 211, 232, 0.15); margin: 16px; border-radius: var(--radius-md); border: 1px dashed var(--secondary); }
+    .sidebar-user-avatar { width: 40px; height: 40px; border-radius: 50%; background-color: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; }
+    .sidebar-user-info { flex: 1; overflow: hidden; }
+    .sidebar-user-name { font-family: var(--font-heading); font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sidebar-user-role { font-size: 0.8rem; color: var(--text-light); }
+
+    .sidebar-nav { flex: 1; padding: 12px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+      border-radius: var(--radius-md); font-family: var(--font-heading); font-weight: 600; font-size: 1.05rem;
+      color: var(--text-main); text-decoration: none; cursor: pointer; transition: all 0.3s ease;
+    }
+    .nav-item:hover { background-color: rgba(230, 211, 232, 0.3); color: var(--primary); }
+    .nav-item.active { background-color: var(--secondary); color: var(--primary); }
+    .nav-icon { font-size: 1.2rem; width: 24px; text-align: center; }
+
+    .sidebar-footer { padding: 20px; border-top: 1px solid var(--border-color); font-size: 0.85rem; color: var(--text-light); text-align: center; }
+
+    .main-content {
+      flex: 1; margin-left: var(--sidebar-width); position: relative;
+    }
+
+    /* HEADER MOBILE */
+    .mobile-header { display: none; padding: 16px 20px; background-color: var(--card-bg); border-bottom: 1px solid var(--border-color); align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 90; }
+    .hamburger { font-size: 1.5rem; color: var(--primary); cursor: pointer; border: none; background: transparent; }
+
+    /* PANELS */
+    .panel { display: none; padding: 40px; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.4s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .section-title { font-family: var(--font-heading); font-size: 2rem; color: var(--primary); margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+
+    /* CARDS & GRIDS */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+    .card {
+      background-color: var(--card-bg); border-radius: var(--radius-lg); padding: 24px;
+      box-shadow: var(--shadow-soft); transition: all 0.3s ease; position: relative; border: 1px solid var(--border-color);
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--secondary); }
+    .card-icon { font-size: 2.5rem; margin-bottom: 16px; display: inline-block; }
+    .card-title { font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 8px; color: var(--text-main); }
+    .card-desc { font-size: 0.95rem; color: var(--text-light); margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-badge { position: absolute; top: -12px; right: 20px; background-color: var(--accent); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; box-shadow: 0 4px 8px rgba(240,181,193,0.3); }
+
+    /* TABS */
+    .tabs { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 10px 20px; border-radius: 30px; font-family: var(--font-heading); font-weight: 600;
+      background-color: var(--card-bg); border: 2px solid var(--border-color); color: var(--text-main);
+      cursor: pointer; transition: all 0.3s ease;
+    }
+    .tab-btn:hover { border-color: var(--secondary); }
+    .tab-btn.active { background-color: var(--secondary); border-color: var(--secondary); color: var(--primary); }
+
+    /* DASHBOARD */
+    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 40px; }
+    .stat-card { background: linear-gradient(135deg, var(--card-bg), var(--bg-color)); text-align: center; border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); }
+    .stat-value { font-family: var(--font-heading); font-size: 2.5rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+    .stat-label { font-size: 0.9rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
+    
+    .leaderboard-table { width: 100%; border-collapse: separate; border-spacing: 0 12px; }
+    .leaderboard-table th { font-family: var(--font-heading); font-weight: 600; text-align: left; padding: 0 16px 8px; color: var(--text-light); font-size: 0.9rem; border-bottom: 1px solid var(--border-color); }
+    .leaderboard-table td { padding: 16px; background-color: var(--card-bg); }
+    .leaderboard-table tr td:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); font-weight: 600; }
+    .leaderboard-table tr td:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+    .leaderboard-table tr { box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: transform 0.2s; }
+    .leaderboard-table tr:hover { transform: scale(1.01); }
+
+    /* WORKSPACE (BÀI LÀM / ĐỌC HIỂU) */
+    .workspace-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(92, 78, 78, 0.4); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+    .workspace-overlay.active { display: flex; }
+    .workspace-modal { background-color: var(--bg-color); width: 100%; max-width: 1400px; height: 95vh; border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,0.15); animation: zoomIn 0.3s ease; }
+    @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    
+    .workspace-header { padding: 20px 32px; background-color: white; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    .workspace-title { font-family: var(--font-heading); font-size: 1.4rem; color: var(--primary); font-weight: 700; }
+    .workspace-body { display: flex; flex: 1; overflow: hidden; }
+    .workspace-left { flex: 1; padding: 32px; overflow-y: auto; background-color: white; font-size: 1.1rem; line-height: 1.8; border-right: 1px solid var(--border-color); }
+    .workspace-right { flex: 1.2; padding: 32px; overflow-y: auto; background-color: var(--bg-color); }
+    
+    .question-block { background: white; padding: 24px; border-radius: var(--radius-md); margin-bottom: 24px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); }
+    .question-title { font-family: var(--font-heading); font-weight: 700; color: var(--primary); margin-bottom: 12px; font-size: 1.1rem; white-space: pre-wrap; }
+    /* Ngăn bôi đen ngữ liệu */
+    .unselectable { -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
+    
+    .question-textarea { width: 100%; min-height: 120px; padding: 16px; border: 2px solid var(--border-color); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 1rem; resize: vertical; transition: all 0.3s; background-color: var(--bg-color); }
+    .question-textarea:focus { border-color: var(--primary); outline: none; background-color: white; }
+    .timer-badge { background-color: var(--accent); color: white; padding: 6px 16px; border-radius: 20px; font-family: var(--font-heading); font-weight: 700; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 8px; }
+    
+    /* GRADING 4 COLUMNS / 3 COLUMNS */
+    .grading-grid { display: grid; gap: 16px; margin-top: 16px; }
+    .cols-4 { grid-template-columns: 2fr 2fr 1fr 1fr; }
+    .cols-3 { grid-template-columns: 2fr 2fr 1fr; }
+    .grading-col { background: var(--bg-color); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); }
+    .grading-col-title { font-size: 0.85rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 8px; display: block; letter-spacing: 0.5px; }
+    .grading-text { font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; }
+    .grading-ans { color: #2d6a4f; background: #e8f5e9; padding: 12px; border-radius: var(--radius-sm); }
+    .score-select { width: 100%; padding: 8px; border-radius: 6px; border: 2px solid var(--secondary); font-family: var(--font-heading); font-weight: 600; color: var(--primary); text-align: center; }
+    
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+    .status-pending { background-color: var(--warning); color: #856404; }
+    .status-graded { background-color: var(--success); color: #155724; }
+
+    /* ONBOARDING MODAL */
+    .onboarding-container { background: white; width: 90%; max-width: 500px; padding: 40px; border-radius: var(--radius-lg); text-align: center; box-shadow: 0 32px 64px rgba(0,0,0,0.1); position: relative; }
+    .floral-decoration { position: absolute; width: 80px; opacity: 0.7; }
+    .floral-tl { top: -20px; left: -20px; transform: rotate(-30deg); font-size: 3rem; }
+    .floral-br { bottom: -20px; right: -20px; transform: rotate(150deg); font-size: 3rem; }
+    .toggle-login { margin-top: 24px; font-size: 0.9rem; color: var(--text-light); cursor: pointer; text-decoration: underline; font-weight: 600; }
+    .toggle-login:hover { color: var(--primary); }
+
+    /* MASCOT & TOAST */
+    .mascot { position: fixed; bottom: 30px; right: 30px; z-index: 1000; animation: float 3s ease-in-out infinite; cursor: pointer; }
+    .mascot-img { font-size: 4.5rem; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1)); }
+    .mascot-bubble { position: absolute; bottom: 90px; right: 20px; background: white; padding: 16px 24px; border-radius: var(--radius-lg) var(--radius-lg) 0 var(--radius-lg); box-shadow: var(--shadow-hover); width: 250px; font-size: 0.95rem; display: none; border: 2px solid var(--secondary); font-weight: 500; }
+    .mascot-bubble::after { content: ''; position: absolute; bottom: -10px; right: 20px; border-width: 10px 10px 0 0; border-style: solid; border-color: var(--secondary) transparent transparent transparent; }
+    @keyframes float { 0% { transform: translateY(0); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0); } }
+
+    .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 12px; pointer-events: none; }
+    .toast { background: var(--card-bg); border-left: 4px solid var(--primary); padding: 16px 24px; border-radius: var(--radius-md); box-shadow: 0 10px 30px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 12px; animation: slideUp 0.3s ease forwards; font-family: var(--font-heading); font-weight: 600; color: var(--text-main); }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .toast-out { animation: slideDown 0.3s ease forwards; }
+    @keyframes slideDown { to { opacity: 0; transform: translateY(20px); } }
+
+    /* EFFECTS */
+    .falling-petal { position: fixed; top: -20px; z-index: 1; user-select: none; pointer-events: none; animation: fall linear infinite; font-size: 1.2rem; }
+    @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
+
+    /* RESPONSIVE */
+    @media (max-width: 1024px) {
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .workspace-modal { width: 95%; height: 98vh; }
+      .grading-grid.cols-4 { grid-template-columns: 1fr 1fr; }
+      .grading-grid.cols-3 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+      .sidebar.open { transform: translateX(0); }
+      .main-content { margin-left: 0; }
+      .mobile-header { display: flex; }
+      .stat-grid { grid-template-columns: 1fr; }
+      .workspace-body { flex-direction: column; overflow-y: auto; }
+      .workspace-left, .workspace-right { overflow-y: visible; border-right: none; }
+      .panel { padding: 20px; }
+      .grading-grid.cols-4, .grading-grid.cols-3 { grid-template-columns: 1fr; }
+    }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 95; display: none; }
+    .overlay.active { display: block; }
+
+    /* ==========================================================================
+       PRINT CSS (DÀNH CHO TẢI XUỐNG PDF / IN ẤN SẠCH SẼ)
+       ========================================================================== */
+    @media print {
+      body * { visibility: hidden; }
+      .workspace-modal, .workspace-modal * { visibility: visible; }
+      .workspace-modal { position: absolute; left: 0; top: 0; width: 100%; height: auto; box-shadow: none; border-radius: 0; overflow: visible; }
+      .workspace-header button, .btn, .mascot, .sidebar, .mobile-header, .timer-badge { display: none !important; }
+      .workspace-body { flex-direction: column; overflow: visible; }
+      .workspace-left, .workspace-right { width: 100%; border: none; padding: 10px; overflow: visible; height: auto; }
+      .question-textarea { border: none; border-bottom: 1px dotted #ccc; background: transparent; padding: 4px; min-height: auto; }
+      .grading-col { page-break-inside: avoid; border: 1px solid #ccc; }
+      .grading-grid { display: block; }
+      .grading-grid > div { margin-bottom: 10px; }
+      @page { margin: 1.5cm; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- MOBILE HEADER -->
+  <header class="mobile-header">
+    <div class="sidebar-logo">🌸 VĂN UYỂN</div>
+    <button class="hamburger" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+  </header>
+  <div class="overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <div class="app-container">
+    <!-- SIDEBAR -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">🌸 VĂN UYỂN</div>
+        <div class="sidebar-slogan">Nơi chữ nghĩa nở hoa 🌿</div>
+      </div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar" id="nav-avatar">🌱</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="nav-username">Học sinh</div>
+          <div class="sidebar-user-role" id="nav-role">Đang tải...</div>
+        </div>
+      </div>
+      <div class="sidebar-nav">
+        <a class="nav-item active" onclick="nav('home')"><span class="nav-icon">🏡</span> Trang chủ</a>
+        <a class="nav-item" onclick="nav('theory')"><span class="nav-icon">🌿</span> Góc kiến thức</a>
+        <a class="nav-item" onclick="nav('practice')"><span class="nav-icon">🌸</span> Góc luyện tập</a>
+        <a class="nav-item" onclick="nav('exam')"><span class="nav-icon">🍁</span> Góc thi thử</a>
+        <a class="nav-item teacher-only hidden" onclick="nav('admin')"><span class="nav-icon">🌻</span> Góc soạn đề</a>
+        <a class="nav-item teacher-only hidden" onclick="nav('manage')"><span class="nav-icon">🍀</span> Góc quản lý</a>
+        <a class="nav-item" onclick="nav('settings')"><span class="nav-icon">🌼</span> Cài đặt</a>
+      </div>
+      <div class="sidebar-footer">👩‍🏫 Hà Thanh Hằng<br>GV Ngữ văn THCS Yên Phong</div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      
+      <!-- PANEL: HOME -->
+      <section class="panel active" id="panel-home">
+        <h2 class="section-title">🏡 Chào mừng tới Khu Vườn Văn Chương</h2>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-practice">0</div>
+            <div class="stat-label">Đề luyện tập đã làm</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-exam">0</div>
+            <div class="stat-label">Đề thi thử đã làm</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-avg">0.0</div>
+            <div class="stat-label">Điểm trung bình</div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-heading" style="font-size:1.4rem;color:var(--primary);">🏆 Bảng vàng thành tích</h3>
+            <select class="input-control" style="width:250px;" id="lb-filter" onchange="renderLeaderboard()">
+              <option value="all">Tất cả bài làm (Tổng hợp)</option>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="leaderboard-table">
+              <thead><tr><th>Hạng</th><th>Học sinh</th><th>Lớp - Trường</th><th>Đề bài</th><th>Điểm số</th><th>Thời gian</th></tr></thead>
+              <tbody id="lb-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL: THEORY -->
+      <section class="panel" id="panel-theory">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="section-title" style="margin:0;">🌿 Góc Kiến Thức</h2>
+          <button class="btn btn-primary teacher-only hidden" onclick="openTheoryEditor()"><i class="fa-solid fa-plus"></i> Đăng bài viết</button>
+        </div>
+        <div class="tabs" id="theory-main-tabs">
+          <button class="tab-btn active" onclick="selectMainTheoryCategory('doc-hieu', event)">📖 Đọc hiểu</button>
+          <button class="tab-btn" onclick="selectMainTheoryCategory('viet-doan', event)">✍️ Viết đoạn văn</button>
+          <button class="tab-btn" onclick="selectMainTheoryCategory('viet-bai', event)">📝 Viết bài văn</button>
+        </div>
+        <div class="tabs" id="theory-sub-tabs" style="margin-top:-10px; margin-bottom:20px; gap:8px;">
+          <!-- Subtabs -->
+        </div>
+        <div class="grid" id="theory-grid"></div>
+      </section>
+
+      <!-- PANEL: PRACTICE -->
+      <section class="panel" id="panel-practice">
+        <h2 class="section-title">🌸 Góc Luyện Tập</h2>
+        <div class="tabs">
+          <button class="tab-btn active" onclick="filterPractice('vao-10')">📝 Ôn thi vào 10 (Đại trà)</button>
+          <button class="tab-btn" onclick="filterPractice('hsg')">🏆 Ôn thi HSG, Chuyên</button>
+        </div>
+        <div class="grid" id="practice-grid"></div>
+      </section>
+
+      <!-- PANEL: EXAM -->
+      <section class="panel" id="panel-exam">
+        <h2 class="section-title">🍁 Góc Thi Thử</h2>
+        <div class="tabs">
+          <button class="tab-btn active" onclick="filterExam('vao-10')">📝 Ôn thi vào 10 (Đại trà)</button>
+          <button class="tab-btn" onclick="filterExam('hsg')">🏆 Ôn thi HSG, Chuyên</button>
+        </div>
+        <div class="grid" id="exam-grid"></div>
+      </section>
+
+      <!-- PANEL: ADMIN (SOẠN ĐỀ) -->
+      <section class="panel teacher-only hidden" id="panel-admin">
+        <h2 class="section-title">🌻 Góc Soạn Đề</h2>
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchAdminTab('practice')">🌸 Soạn đề Luyện tập (5 câu)</button>
+          <button class="tab-btn" onclick="switchAdminTab('exam')">🍁 Soạn đề Thi thử (7 câu)</button>
+        </div>
+        <div class="card" id="admin-form-container">
+          <!-- Form generated by JS -->
+        </div>
+      </section>
+
+      <!-- PANEL: MANAGE (QUẢN LÝ LỚP) -->
+      <section class="panel teacher-only hidden" id="panel-manage">
+        <h2 class="section-title">🍀 Góc Quản Lý Lớp & Học Sinh</h2>
+        <div class="flex gap-4" style="flex-wrap:wrap;">
+          <!-- TẠO LỚP & TÀI KHOẢN -->
+          <div class="card" style="flex:1; min-width:300px;">
+            <h3 class="font-heading mb-3 text-primary">Tạo Lớp Học Mới</h3>
+            <div class="input-group">
+              <label>Tên lớp (VD: 9A1)</label>
+              <input type="text" id="manage-new-class-name" class="input-control">
+            </div>
+            <div class="input-group">
+              <label>Năm học (VD: 2025-2026)</label>
+              <input type="text" id="manage-new-class-year" class="input-control" value="2025-2026">
+            </div>
+            <button class="btn btn-primary w-full" onclick="createNewClass()">Tạo Lớp</button>
+            <hr style="margin:20px 0; border:none; border-top:1px dashed var(--border-color);">
+            
+            <h3 class="font-heading mb-3 text-primary">Tạo Tài Khoản Hàng Loạt</h3>
+            <div class="input-group">
+              <label>Chọn Lớp</label>
+              <select id="manage-select-class" class="input-control"></select>
+            </div>
+            <div class="input-group">
+              <label>Danh sách Học sinh (Mỗi dòng 1 tên)</label>
+              <textarea id="manage-students-list" class="input-control" placeholder="Nguyễn Văn A&#10;Trần Thị B"></textarea>
+            </div>
+            <button class="btn btn-accent w-full" onclick="generateAccounts()">⚡ Tạo Tài Khoản Nhanh</button>
+          </div>
+
+          <!-- DANH SÁCH & CHẤM ĐIỂM -->
+          <div class="card" style="flex:2; min-width:400px;">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-heading text-primary">Danh Sách Học Sinh</h3>
+              <select id="manage-view-class" class="input-control" style="width:200px;" onchange="renderManageStudents()">
+                <option value="all">-- Tất cả Lớp --</option>
+              </select>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="leaderboard-table" style="font-size:0.9rem;">
+                <thead><tr><th>Họ Tên</th><th>Lớp</th><th>Tài Khoản</th><th>Mật Khẩu</th><th>Hành Động</th></tr></thead>
+                <tbody id="manage-students-body"></tbody>
+              </table>
+            </div>
+            <button class="btn btn-outline mt-3" onclick="exportClassAccounts()"><i class="fa-solid fa-download"></i> Tải Danh sách (.txt)</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL: SETTINGS -->
+      <section class="panel" id="panel-settings">
+        <h2 class="section-title">🌼 Cài đặt</h2>
+        <div class="card" style="max-width:500px; margin:0 auto;">
+          <h3 class="font-heading mb-3 text-primary">Thông Tin Cá Nhân</h3>
+          <div class="text-center mb-3">
+            <div class="sidebar-user-avatar" style="width:80px;height:80px;font-size:2.5rem;margin:0 auto;" id="setting-avatar">🌱</div>
+            <h4 class="mt-2 font-heading" style="font-size:1.2rem;" id="setting-name">Chưa đăng nhập</h4>
+            <p class="text-light" id="setting-desc">...</p>
+          </div>
+          <hr style="margin:20px 0;border:none;border-top:1px solid var(--border-color);">
+          <div class="student-only hidden">
+            <h4 class="font-heading mb-2 text-primary">Đổi Mật Khẩu (Học sinh lớp)</h4>
+            <div class="input-group"><input type="password" id="setting-old-pwd" class="input-control" placeholder="Mật khẩu cũ"></div>
+            <div class="input-group"><input type="password" id="setting-new-pwd" class="input-control" placeholder="Mật khẩu mới"></div>
+            <button class="btn btn-secondary w-full" onclick="changePassword()">Đổi Mật Khẩu</button>
+          </div>
+          <button class="btn btn-danger mt-3 w-full" onclick="logout()"><i class="fa-solid fa-sign-out-alt"></i> Đăng xuất / Trở về Màn hình chính</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ONBOARDING MODAL -->
+  <div class="workspace-overlay active" id="onboarding-modal" style="background-color:var(--bg-color);">
+    <div class="onboarding-container">
+      <div class="floral-decoration floral-tl">🌸</div>
+      <div class="floral-decoration floral-br">🌿</div>
+      <h2 class="font-heading text-primary mb-1" style="font-size:2.2rem;">🌸 VĂN UYỂN</h2>
+      <p class="text-light mb-4" style="font-style:italic;">Nơi chữ nghĩa nở hoa</p>
+      
+      <!-- FORM TỰ DO -->
+      <div id="form-free">
+        <div class="input-group">
+          <label>📛 Họ và tên</label>
+          <input type="text" id="free-name" class="input-control" placeholder="Nhập tên của cậu...">
+        </div>
+        <div class="flex gap-3">
+          <div class="input-group" style="flex:1;"><label>🎒 Lớp</label><input type="text" id="free-class" class="input-control" placeholder="VD: 9A"></div>
+          <div class="input-group" style="flex:1;"><label>🏫 Trường</label><input type="text" id="free-school" class="input-control" placeholder="VD: THCS Yên Phong"></div>
+        </div>
+        <button class="btn btn-primary mt-2 w-full" style="font-size:1.1rem; padding:12px;" onclick="loginFree()">Bắt đầu học ngay 🚀</button>
+        <div class="toggle-login" onclick="toggleLoginForm()">🔑 Đăng nhập Tài khoản Lớp / Giáo viên</div>
+      </div>
+
+      <!-- FORM TÀI KHOẢN -->
+      <div id="form-account" class="hidden">
+        <div class="input-group">
+          <label>👤 Tên đăng nhập (Tài khoản lớp / Admin)</label>
+          <input type="text" id="acc-user" class="input-control" placeholder="VD: nguyenvananh hoặc admin@hathanhhang">
+        </div>
+        <div class="input-group">
+          <label>🔒 Mật khẩu</label>
+          <input type="password" id="acc-pwd" class="input-control" placeholder="••••••••">
+        </div>
+        <button class="btn btn-accent mt-2 w-full" style="font-size:1.1rem; padding:12px;" onclick="loginAccount()">Đăng nhập hệ thống 🔓</button>
+        <div class="toggle-login" onclick="toggleLoginForm()">🔙 Trở lại nhập thông tin tự do</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKSPACE MODAL (LÀM BÀI / CHẤM BÀI) -->
+  <div class="workspace-overlay" id="workspace-modal">
+    <div class="workspace-modal">
+      <div class="workspace-header">
+        <div class="workspace-title" id="ws-title">Tiêu đề bài làm</div>
+        <div class="flex gap-2 items-center">
+          <div class="timer-badge" id="ws-timer">⏱️ 00:00</div>
+          <button class="btn btn-secondary" onclick="closeWorkspace()">Đóng</button>
+          <button class="btn btn-primary" id="ws-submit-btn" onclick="submitWorkspace()">Nộp bài</button>
+          <button class="btn btn-accent hidden" id="ws-print-btn" onclick="window.print()"><i class="fa-solid fa-download"></i> Tải bài (PDF)</button>
+        </div>
+      </div>
+      <div class="workspace-body">
+        <div class="workspace-left">
+          <h3 class="font-heading mb-2 text-primary">📖 Ngữ liệu</h3>
+          <div id="ws-passage" class="unselectable" style="white-space:pre-wrap; font-size:1.05rem;"></div>
+        </div>
+        <div class="workspace-right" id="ws-questions">
+          <!-- Dynamic questions -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- THEORY READER MODAL -->
+  <div class="workspace-overlay" id="theory-modal">
+    <div class="workspace-modal" style="max-width:900px; height:85vh;">
+      <div class="workspace-header">
+        <div class="workspace-title" id="th-title">Bài học</div>
+        <button class="btn btn-secondary" onclick="closeTheory()">Đóng</button>
+      </div>
+      <div class="workspace-body" style="padding:40px; overflow-y:auto; font-size:1.1rem; line-height:1.8; background:white;">
+        <div id="th-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- THEORY EDITOR MODAL -->
+  <div class="workspace-overlay" id="theory-editor-modal">
+    <div class="workspace-modal" style="max-width:800px; height:90vh;">
+      <div class="workspace-header">
+        <div class="workspace-title">Đăng Bài Viết Kiến Thức</div>
+        <div class="flex gap-2">
+          <button class="btn btn-secondary" onclick="closeTheoryEditor()">Hủy</button>
+          <button class="btn btn-primary" onclick="saveTheoryArticle()">Lưu Đăng</button>
+        </div>
+      </div>
+      <div class="workspace-body" style="padding:32px; overflow-y:auto; display:block;">
+        <div class="input-group"><label>Tiêu đề bài viết</label><input type="text" id="te-title" class="input-control"></div>
+        <div class="flex gap-3">
+          <div class="input-group" style="flex:1;"><label>Mục chính</label><select id="te-cat" class="input-control" onchange="updateTeSubcat()"><option value="doc-hieu">Đọc hiểu</option><option value="viet-doan">Viết đoạn văn</option><option value="viet-bai">Viết bài văn</option></select></div>
+          <div class="input-group" style="flex:1;"><label>Mục nhỏ</label><select id="te-subcat" class="input-control"></select></div>
+          <div class="input-group" style="flex:1;"><label>Loại bài</label><select id="te-type" class="input-control"><option value="reference">Bài tham khảo</option><option value="sharing">Chia sẻ kinh nghiệm</option></select></div>
+          <div class="input-group" style="width:80px;"><label>Icon</label><input type="text" id="te-icon" class="input-control" value="📚"></div>
+        </div>
+        <div class="flex gap-3">
+          <div class="input-group" style="flex:1;"><label>Định dạng</label><select id="te-format" class="input-control" onchange="updateTeFormat()"><option value="text">Bài viết (Text)</option><option value="link">Đường dẫn (Link)</option><option value="image">Tải lên Ảnh</option><option value="pdf">Tải lên PDF</option></select></div>
+          <div class="input-group" style="flex:2; display:none;" id="te-file-group"><label>Chọn File (Tối đa 5MB)</label><input type="file" id="te-file" class="input-control" accept="image/*,application/pdf" onchange="handleTeFileChange(event)"></div>
+          <div class="input-group" style="flex:2; display:none;" id="te-link-group"><label>Nhập đường dẫn (URL)</label><input type="url" id="te-link" class="input-control" placeholder="https://..."></div>
+        </div>
+        <div class="input-group"><label>Mô tả ngắn</label><input type="text" id="te-desc" class="input-control"></div>
+        <div class="input-group" id="te-content-group"><label>Nội dung (Hỗ trợ HTML)</label><textarea id="te-content" class="input-control" style="height:300px;"></textarea></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MASCOT & TOAST -->
+  <div class="mascot" onclick="pokeMascot()">
+    <div class="mascot-img" id="mascot-face">🌱</div>
+    <div class="mascot-bubble" id="mascot-msg">Chào cậu! Hãy bắt đầu làm bài nhé.</div>
+  </div>
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- FLOWER FALLING CONTAINER -->
+  <div id="falling-container"></div>
+
+  <!-- ==========================================================================
+       JAVASCRIPT
+       ========================================================================== -->
+  <script>
+    /* --------------------------------------------------------------------------
+       1. DATA SERVICE (MOCK CLOUD FIREBASE)
+       -------------------------------------------------------------------------- */
+    const DB = {
+      get: (table) => JSON.parse(localStorage.getItem(`vu_${table}`) || '[]'),
+      set: (table, data) => localStorage.setItem(`vu_${table}`, JSON.stringify(data)),
+      add: (table, item) => { const d = DB.get(table); item.id = item.id || Date.now().toString(); d.push(item); DB.set(table, d); return item; },
+      update: (table, id, updates) => { const d = DB.get(table); const idx = d.findIndex(i => i.id === id); if(idx>-1){ d[idx]={...d[idx], ...updates}; DB.set(table, d); } },
+      remove: (table, id) => { const d = DB.get(table); DB.set(table, d.filter(i => i.id !== id)); },
+      find: (table, fn) => DB.get(table).find(fn),
+      filter: (table, fn) => DB.get(table).filter(fn)
+    };
+
+    function seedInitialData() {
+      if (DB.get('users').length === 0) {
+        DB.add('users', { id: 'admin@hathanhhang', password: 'hathanhhangc2yenphong', role: 'teacher', fullName: 'Hà Thanh Hằng', schoolName: 'THCS Yên Phong' });
+      }
+      if (DB.get('theory_articles').length === 0) {
+        const defaultTheory = [
+          { mainCat: 'doc-hieu', subCat: 'doc-hieu-tho', type: 'core', format: 'text', icon: '🌸', title: 'Tri thức Thơ', desc: 'Đặc trưng thể loại thơ và phương pháp', content: '<h2>Tri thức Thơ</h2><p>Thơ dùng ngôn ngữ cô đọng, giàu nhạc điệu.</p>' },
+          { mainCat: 'doc-hieu', subCat: 'doc-hieu-truyen', type: 'core', format: 'text', icon: '📖', title: 'Tri thức Truyện', desc: 'Đặc trưng tự sự', content: '<h2>Tri thức Truyện</h2><p>Cốt truyện, nhân vật, ngôi kể.</p>' },
+          { mainCat: 'doc-hieu', subCat: 'doc-hieu-vb-thong-tin', type: 'core', format: 'text', icon: '📰', title: 'Văn bản Thông tin', desc: 'Khách quan, chính xác', content: '<h2>Thông tin</h2><p>Số liệu, dẫn chứng cụ thể.</p>' },
+          { mainCat: 'doc-hieu', subCat: 'doc-hieu-vb-nghi-luan', type: 'core', format: 'text', icon: '⚖️', title: 'Văn bản Nghị luận', desc: 'Lí lẽ, dẫn chứng', content: '<h2>Nghị luận</h2><p>Luận điểm, luận cứ rõ ràng.</p>' },
+          { mainCat: 'viet-doan', subCat: 'viet-doan-nlxh', type: 'core', format: 'text', icon: '✍️', title: 'Đoạn văn NLXH (200 chữ)', desc: 'Cách lập dàn ý và triển khai', content: '<h2>Đoạn NLXH 200 chữ</h2><p>Mở đoạn (Giới thiệu vấn đề) - Thân đoạn (Giải thích, Bàn luận, Dẫn chứng, Phản đề) - Kết đoạn (Bài học).</p>' },
+          { mainCat: 'viet-doan', subCat: 'viet-doan-nlvh', type: 'core', format: 'text', icon: '✍️', title: 'Đoạn văn NLVH', desc: 'Cảm thụ chi tiết nghệ thuật', content: '<h2>Đoạn NLVH</h2><p>Phân tích một chi tiết nghệ thuật đặc sắc.</p>' },
+          { mainCat: 'viet-bai', subCat: 'viet-bai-nlxh', type: 'core', format: 'text', icon: '📝', title: 'Bài văn NLXH', desc: 'Cấu trúc bài văn đầy đủ', content: '<h2>Bài văn NLXH</h2><p>Mở bài, Thân bài (các luận điểm), Kết bài.</p>' },
+          { mainCat: 'viet-bai', subCat: 'viet-bai-nlvh', type: 'core', format: 'text', icon: '📝', title: 'Bài văn NLVH', desc: 'Phân tích toàn bộ tác phẩm', content: '<h2>Bài văn NLVH</h2><p>Phân tích giá trị nội dung và nghệ thuật của tác phẩm.</p>' }
+        ];
+        defaultTheory.forEach(t => DB.add('theory_articles', t));
+      }
+      // Purge old AI exams if they exist
+      const pExams = DB.get('practice_exams');
+      if(pExams.some(x => ['p1','p2'].includes(x.id))) DB.set('practice_exams', pExams.filter(x => !['p1','p2'].includes(x.id)));
+      const mExams = DB.get('mock_exams');
+      if(mExams.some(x => x.id === 'm1')) DB.set('mock_exams', mExams.filter(x => x.id !== 'm1'));
+    }
+    seedInitialData();
+
+    // STATE
+    let currentUser = JSON.parse(sessionStorage.getItem('vu_current_user') || 'null');
+    let currentWorkspace = null;
+    
+    /* --------------------------------------------------------------------------
+       2. AUTH & ONBOARDING
+       -------------------------------------------------------------------------- */
+    function checkAuth() {
+      if (!currentUser) { document.getElementById('onboarding-modal').classList.add('active'); return; }
+      document.getElementById('onboarding-modal').classList.remove('active');
+      
+      const isTeacher = currentUser.role === 'teacher';
+      document.querySelectorAll('.teacher-only').forEach(el => isTeacher ? el.classList.remove('hidden') : el.classList.add('hidden'));
+      document.querySelectorAll('.student-only').forEach(el => (!isTeacher && currentUser.isClassStudent) ? el.classList.remove('hidden') : el.classList.add('hidden'));
+      
+      const avatarIcon = isTeacher ? '👩‍🏫' : '🎒';
+      const roleText = isTeacher ? 'Giáo viên' : (currentUser.className ? `${currentUser.className} - ${currentUser.schoolName}` : 'Tự do');
+      
+      document.getElementById('nav-avatar').innerText = avatarIcon;
+      document.getElementById('nav-username').innerText = currentUser.fullName || currentUser.id;
+      document.getElementById('nav-role').innerText = roleText;
+      
+      document.getElementById('setting-avatar').innerText = avatarIcon;
+      document.getElementById('setting-name').innerText = currentUser.fullName || currentUser.id;
+      document.getElementById('setting-desc').innerText = isTeacher ? 'Tài khoản Quản trị' : (currentUser.className ? `Lớp ${currentUser.className} | Trường ${currentUser.schoolName}` : 'Tài khoản tự do');
+      
+      nav('home');
+    }
+
+    function toggleLoginForm() {
+      const fFree = document.getElementById('form-free');
+      const fAcc = document.getElementById('form-account');
+      fFree.classList.toggle('hidden'); fAcc.classList.toggle('hidden');
+    }
+
+    function loginFree() {
+      const n = document.getElementById('free-name').value.trim();
+      const c = document.getElementById('free-class').value.trim() || 'Tự do';
+      const s = document.getElementById('free-school').value.trim() || 'Tự do';
+      if(!n) return showToast('Cậu chưa nhập họ tên kìa!');
+      currentUser = { id: `free_${Date.now()}`, role: 'student', fullName: n, className: c, schoolName: s, isClassStudent: false, classId: 'free_class' };
+      sessionStorage.setItem('vu_current_user', JSON.stringify(currentUser));
+      checkAuth(); showToast(`Chào mừng cậu, ${n}! 🌱`);
+    }
+
+    function loginAccount() {
+      const u = document.getElementById('acc-user').value.trim();
+      const p = document.getElementById('acc-pwd').value.trim();
+      const user = DB.find('users', x => x.id === u && x.password === p);
+      if(!user) return showToast('Tài khoản hoặc mật khẩu không chính xác!');
+      currentUser = user;
+      sessionStorage.setItem('vu_current_user', JSON.stringify(currentUser));
+      checkAuth(); showToast(`Chào mừng trở lại! 🌸`);
+    }
+
+    function logout() { currentUser = null; sessionStorage.removeItem('vu_current_user'); location.reload(); }
+    
+    function changePassword() {
+      const oldP = document.getElementById('setting-old-pwd').value;
+      const newP = document.getElementById('setting-new-pwd').value;
+      if(oldP !== currentUser.password) return showToast('Mật khẩu cũ không đúng!');
+      if(newP.length < 3) return showToast('Mật khẩu mới quá ngắn!');
+      DB.update('users', currentUser.id, { password: newP });
+      currentUser.password = newP; sessionStorage.setItem('vu_current_user', JSON.stringify(currentUser));
+      showToast('Đổi mật khẩu thành công! ✅');
+      document.getElementById('setting-old-pwd').value=''; document.getElementById('setting-new-pwd').value='';
+    }
+
+    /* --------------------------------------------------------------------------
+       3. NAVIGATION & UI HELPERS
+       -------------------------------------------------------------------------- */
+    function nav(panelId) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById(`panel-${panelId}`).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      event?.currentTarget?.classList.add('active');
+      if(window.innerWidth <= 768) { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('active'); }
+      
+      if(panelId === 'home') updateDashboard();
+      if(panelId === 'theory') { const mainTab = document.querySelector('#theory-main-tabs .tab-btn.active'); if(mainTab) mainTab.click(); else selectMainTheoryCategory('doc-hieu'); }
+      if(panelId === 'practice') filterPractice('vao-10');
+      if(panelId === 'exam') filterExam('vao-10');
+      if(panelId === 'manage') { loadManageClasses(); renderManageStudents(); }
+    }
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebar-overlay').classList.toggle('active'); }
+    function showToast(msg) {
+      const c = document.getElementById('toast-container');
+      const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = msg;
+      c.appendChild(t);
+      setTimeout(() => { t.classList.add('toast-out'); setTimeout(() => t.remove(), 300); }, 3000);
+    }
+    
+    const mascots = ['🌱', '🐝', '🌸', '🦋'];
+    function pokeMascot() { 
+      const face = document.getElementById('mascot-face');
+      face.innerText = mascots[Math.floor(Math.random()*mascots.length)];
+      const bubble = document.getElementById('mascot-msg');
+      const msgs = ["Văn học là nhân học! 🌿", "Cậu đang làm rất tốt! 🌸", "Cố gắng lên nhé! 🐝", "Chữ nghĩa nở hoa 🌷", "Hãy tự tin lên! 🌱"];
+      bubble.innerText = msgs[Math.floor(Math.random()*msgs.length)];
+      bubble.style.display = 'block'; setTimeout(() => bubble.style.display='none', 3000);
+    }
+
+    /* --------------------------------------------------------------------------
+       4. ANTI-CHEAT
+       -------------------------------------------------------------------------- */
+    function enableAntiCheat() {
+      document.addEventListener('contextmenu', preventContext);
+      document.addEventListener('keydown', preventKeys);
+    }
+    function disableAntiCheat() {
+      document.removeEventListener('contextmenu', preventContext);
+      document.removeEventListener('keydown', preventKeys);
+    }
+    function preventContext(e) { if(currentWorkspace) { e.preventDefault(); showToast("🌸 Hãy tự lực làm bài nhé!"); } }
+    function preventKeys(e) {
+      if(!currentWorkspace) return;
+      if (e.ctrlKey || e.metaKey) {
+        if (['c','v','x','u','a'].includes(e.key.toLowerCase())) { e.preventDefault(); showToast("🌸 Sao chép bị khóa rồi nha!"); }
+      }
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) { e.preventDefault(); showToast("🌸 Không mở soi code được đâu!"); }
+    }
+
+    /* --------------------------------------------------------------------------
+       5. DASHBOARD & LEADERBOARD
+       -------------------------------------------------------------------------- */
+    function updateDashboard() {
+      const results = DB.filter('results', r => r.studentId === currentUser.id);
+      const pr = results.filter(r => r.examType === 'practice');
+      const mx = results.filter(r => r.examType === 'mock');
+      document.getElementById('stat-practice').innerText = pr.length;
+      document.getElementById('stat-exam').innerText = mx.length;
+      
+      let sum = 0, count = 0;
+      results.forEach(r => { if(r.status === 'graded') { sum += (r.teacherScore / r.maxScore)*10; count++; } });
+      document.getElementById('stat-avg').innerText = count > 0 ? (sum/count).toFixed(1) : '0.0';
+
+      const sel = document.getElementById('lb-filter');
+      const allExams = [...DB.get('practice_exams'), ...DB.get('mock_exams')];
+      sel.innerHTML = '<option value="all">Tất cả bài làm (Tổng hợp)</option>';
+      allExams.forEach(e => { sel.innerHTML += `<option value="${e.id}">${e.title}</option>`; });
+      renderLeaderboard();
+    }
+
+    function renderLeaderboard() {
+      const filterId = document.getElementById('lb-filter').value;
+      const results = DB.get('results').filter(r => r.status === 'graded'); // Only graded by teacher
+      let displayData = [];
+      
+      if (filterId === 'all') {
+        const map = {};
+        results.forEach(r => {
+          if(!map[r.studentId]) map[r.studentId] = { name: r.studentName, class: r.className, school: r.schoolName, totalScore: 0, count: 0, time: 0 };
+          map[r.studentId].totalScore += (r.teacherScore / r.maxScore) * 10;
+          map[r.studentId].count++;
+          map[r.studentId].time += r.timeSpent;
+        });
+        displayData = Object.values(map).map(v => ({ ...v, score: (v.totalScore/v.count).toFixed(2), title: `${v.count} đề` }));
+      } else {
+        const filtered = results.filter(r => r.examId === filterId);
+        displayData = filtered.map(r => ({ name: r.studentName, class: r.className, school: r.schoolName, score: r.teacherScore, time: r.timeSpent, title: r.examTitle }));
+      }
+
+      displayData.sort((a,b) => b.score - a.score || a.time - b.time);
+
+      const tbody = document.getElementById('lb-body');
+      tbody.innerHTML = displayData.map((d, i) => `
+        <tr>
+          <td><span style="display:inline-block;width:24px;height:24px;text-align:center;border-radius:50%;background:${i===0?'#fce2a8':i===1?'#e2e8f0':i===2?'#f3d5b5':'#f0e6e6'};">${i+1}</span></td>
+          <td>${d.name}</td><td>${d.class} - ${d.school}</td><td>${d.title}</td>
+          <td style="color:var(--primary);font-weight:700;">${d.score}đ</td>
+          <td>${Math.floor(d.time/60)}p ${d.time%60}s</td>
+        </tr>
+      `).join('') || '<tr><td colspan="6" class="text-center text-light">Chưa có kết quả nào được chấm.</td></tr>';
+    }
+
+    /* --------------------------------------------------------------------------
+       6. THEORY (GÓC KIẾN THỨC)
+       -------------------------------------------------------------------------- */
+    const THEORY_SUBCATS = {
+      'doc-hieu': [
+        { id: 'doc-hieu-tho', label: '🌸 Đọc hiểu thơ' },
+        { id: 'doc-hieu-truyen', label: '📖 Đọc hiểu truyện' },
+        { id: 'doc-hieu-vb-thong-tin', label: '📰 Đọc hiểu VB thông tin' },
+        { id: 'doc-hieu-vb-nghi-luan', label: '⚖️ Đọc hiểu VB nghị luận' }
+      ],
+      'viet-doan': [
+        { id: 'viet-doan-nlxh', label: '✍️ Viết đoạn văn NLXH' },
+        { id: 'viet-doan-nlvh', label: '✍️ Viết đoạn văn NLVH' }
+      ],
+      'viet-bai': [
+        { id: 'viet-bai-nlxh', label: '📝 Viết bài văn NLXH' },
+        { id: 'viet-bai-nlvh', label: '📝 Viết bài văn NLVH' }
+      ]
+    };
+    let currentMainTheoryCat = 'doc-hieu';
+
+    function selectMainTheoryCategory(mainCatId, event) {
+      if(event) {
+        document.querySelectorAll('#theory-main-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+      }
+      currentMainTheoryCat = mainCatId;
+      const subContainer = document.getElementById('theory-sub-tabs');
+      subContainer.innerHTML = '';
+      THEORY_SUBCATS[mainCatId].forEach((subCat, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn' + (index === 0 ? ' active' : '');
+        btn.style.fontSize = '0.9rem';
+        btn.style.padding = '6px 12px';
+        btn.onclick = (e) => filterTheory(subCat.id, e);
+        btn.innerText = subCat.label;
+        subContainer.appendChild(btn);
+      });
+      filterTheory(THEORY_SUBCATS[mainCatId][0].id);
+    }
+
+    function filterTheory(subCatId, event) {
+      if(event) {
+        document.querySelectorAll('#theory-sub-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+      }
+      const list = DB.filter('theory_articles', a => a.subCat === subCatId || (!a.subCat && a.category === subCatId));
+      document.getElementById('theory-grid').innerHTML = list.map(t => {
+        let badge = t.type === 'core' ? '🏷️ Cốt lõi' : t.type === 'reference' ? '📚 Tham khảo' : '💡 Chia sẻ';
+        let typeBadge = t.format === 'image' ? '🖼️ Ảnh' : t.format === 'pdf' ? '📄 PDF' : t.format === 'link' ? '🔗 Link' : '📝 Bài viết';
+        let delBtn = (currentUser.role === 'teacher' && t.type !== 'core') ? `<button class="btn btn-danger btn-sm" style="position:absolute;bottom:10px;right:10px;" onclick="event.stopPropagation(); deleteTheory('${t.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
+        return `
+        <div class="card" style="cursor:pointer;" onclick="openTheory('${t.id}')">
+          <div class="card-badge">${badge} | ${typeBadge}</div>
+          <span class="card-icon">${t.icon}</span>
+          <h3 class="card-title">${t.title}</h3>
+          <p class="card-desc">${t.desc}</p>
+          ${delBtn}
+        </div>`;
+      }).join('') || '<p class="text-light" style="grid-column: 1/-1; text-align: center; margin-top: 20px;">Chưa có bài viết nào.</p>';
+    }
+
+    function openTheory(id) {
+      const t = DB.find('theory_articles', x => x.id === id);
+      if(!t) return;
+      document.getElementById('th-title').innerText = t.title;
+      let htmlContent = '';
+      if(t.format === 'image') htmlContent = `<img src="${t.fileData}" style="max-width:100%; border-radius:8px;">`;
+      else if(t.format === 'pdf') htmlContent = `<iframe src="${t.fileData}#toolbar=0" style="width:100%; height:75vh; border:none;"></iframe>`;
+      else if(t.format === 'link') htmlContent = `<div style="text-align:center; padding: 40px;"><p class="mb-3">Bài học này là một liên kết ngoài.</p><a href="${t.fileData}" target="_blank" class="btn btn-primary" style="display:inline-block; padding:12px 24px; font-size:1.1rem; text-decoration:none;">🔗 Mở liên kết ngay</a></div>`;
+      else htmlContent = t.content;
+      document.getElementById('th-content').innerHTML = htmlContent;
+      document.getElementById('theory-modal').classList.add('active');
+    }
+    function closeTheory() { document.getElementById('theory-modal').classList.remove('active'); }
+    
+    function updateTeSubcat() {
+      const mainCat = document.getElementById('te-cat').value;
+      const subSel = document.getElementById('te-subcat');
+      subSel.innerHTML = '';
+      THEORY_SUBCATS[mainCat].forEach(sub => {
+        const opt = document.createElement('option');
+        opt.value = sub.id; opt.innerText = sub.label;
+        subSel.appendChild(opt);
+      });
+    }
+    function updateTeFormat() {
+      const format = document.getElementById('te-format').value;
+      document.getElementById('te-content-group').style.display = 'none';
+      document.getElementById('te-file-group').style.display = 'none';
+      document.getElementById('te-link-group').style.display = 'none';
+      if(format === 'text') document.getElementById('te-content-group').style.display = 'block';
+      else if(format === 'link') document.getElementById('te-link-group').style.display = 'block';
+      else document.getElementById('te-file-group').style.display = 'block';
+    }
+
+    function openTheoryEditor() { 
+      document.getElementById('theory-editor-modal').classList.add('active'); 
+      document.getElementById('te-cat').value = currentMainTheoryCat;
+      updateTeSubcat();
+      const activeSubCat = document.querySelector('#theory-sub-tabs .tab-btn.active')?.onclick?.toString().match(/'([^']+)'/)?.[1];
+      if(activeSubCat) document.getElementById('te-subcat').value = activeSubCat;
+      document.getElementById('te-format').value = 'text'; updateTeFormat();
+      document.getElementById('te-title').value = ''; document.getElementById('te-icon').value = '📚'; document.getElementById('te-desc').value = ''; document.getElementById('te-content').value = ''; document.getElementById('te-file').value = ''; document.getElementById('te-link').value = ''; theoryTempFileData = '';
+    }
+    function closeTheoryEditor() { document.getElementById('theory-editor-modal').classList.remove('active'); }
+    
+    let theoryTempFileData = '';
+    function handleTeFileChange(e) {
+      const file = e.target.files[0];
+      if(!file) { theoryTempFileData = ''; return; }
+      if(file.size > 5 * 1024 * 1024) { showToast('File quá lớn! Vui lòng chọn file dưới 5MB.'); e.target.value = ''; theoryTempFileData = ''; return; }
+      const reader = new FileReader();
+      reader.onload = function(event) { theoryTempFileData = event.target.result; };
+      reader.readAsDataURL(file);
+    }
+
+    function saveTheoryArticle() {
+      const format = document.getElementById('te-format').value;
+      let finalFileData = format === 'link' ? document.getElementById('te-link').value.trim() : (format !== 'text' ? theoryTempFileData : '');
+      const t = {
+        title: document.getElementById('te-title').value,
+        mainCat: document.getElementById('te-cat').value,
+        subCat: document.getElementById('te-subcat').value,
+        type: document.getElementById('te-type').value,
+        format: format,
+        icon: document.getElementById('te-icon').value || '📚',
+        desc: document.getElementById('te-desc').value,
+        content: format === 'text' ? document.getElementById('te-content').value.replace(/\n/g, '<br>') : '',
+        fileData: finalFileData
+      };
+      if(!t.title) return showToast('Nhập tiêu đề nha cô!');
+      if(t.format === 'text' && !t.content) return showToast('Chưa nhập nội dung!');
+      if(t.format === 'link' && !t.fileData) return showToast('Chưa nhập đường dẫn!');
+      if((t.format === 'image' || t.format === 'pdf') && !t.fileData) return showToast('Chưa chọn file hợp lệ (Ảnh/PDF)!');
+      
+      DB.add('theory_articles', t); closeTheoryEditor(); filterTheory(t.subCat); showToast('Đăng bài thành công! 🌿');
+    }
+    function deleteTheory(id) { if(confirm('Cô muốn xóa bài này?')) { DB.remove('theory_articles', id); const activeSub = document.querySelector('#theory-sub-tabs .tab-btn.active'); if(activeSub) { const match = activeSub.getAttribute('onclick').match(/'(.*)'/); if(match) filterTheory(match[1]); } } }
+
+    /* --------------------------------------------------------------------------
+       7. PRACTICE & EXAM WORKSPACE
+       -------------------------------------------------------------------------- */
+    function filterPractice(group) {
+      document.querySelectorAll('#panel-practice .tab-btn').forEach(btn => btn.classList.remove('active'));
+      event?.currentTarget?.classList.add('active');
+      const list = DB.filter('practice_exams', x => x.targetGroup === group);
+      const icons = {tho:'🌸', truyen:'🍁', 'thong-tin':'🌿', 'nghi-luan':'🍀'};
+      document.getElementById('practice-grid').innerHTML = list.map(item => {
+        let teacherActions = '';
+        if(currentUser && currentUser.role === 'teacher') {
+          teacherActions = `<div style="position:absolute;top:10px;right:10px;display:flex;gap:4px;">
+            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); editExam('practice', '${item.id}')"><i class="fa-solid fa-pencil"></i> Sửa</button>
+            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteExam('practice', '${item.id}')"><i class="fa-solid fa-trash"></i> Xoá</button>
+          </div>`;
+        }
+        return `
+        <div class="card text-center" style="cursor:pointer; position:relative;" onclick="startWorkspace('practice', '${item.id}')">
+          ${teacherActions}
+          <span class="card-icon">${icons[item.genre] || '📝'}</span>
+          <h3 class="card-title">${item.title}</h3>
+          <p class="text-light" style="font-size:0.9rem;">5 câu hỏi | Tổng 4.0 điểm</p>
+          <button class="btn btn-primary mt-2 w-full">Làm bài ngay <i class="fa-solid fa-arrow-right"></i></button>
+        </div>`;
+      }).join('');
+    }
+    function filterExam(group) {
+      document.querySelectorAll('#panel-exam .tab-btn').forEach(btn => btn.classList.remove('active'));
+      event?.currentTarget?.classList.add('active');
+      const list = DB.filter('mock_exams', x => x.targetGroup === group);
+      document.getElementById('exam-grid').innerHTML = list.map(item => {
+        let teacherActions = '';
+        if(currentUser && currentUser.role === 'teacher') {
+          teacherActions = `<div style="position:absolute;top:10px;right:10px;display:flex;gap:4px;">
+            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); editExam('mock', '${item.id}')"><i class="fa-solid fa-pencil"></i> Sửa</button>
+            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteExam('mock', '${item.id}')"><i class="fa-solid fa-trash"></i> Xoá</button>
+          </div>`;
+        }
+        return `
+        <div class="card text-center" style="cursor:pointer; border-color:var(--accent); position:relative;" onclick="startWorkspace('mock', '${item.id}')">
+          ${teacherActions}
+          <span class="card-icon">⏱️</span>
+          <h3 class="card-title">${item.title}</h3>
+          <p class="text-light" style="font-size:0.9rem;">7 câu hỏi | Tổng 10.0 điểm</p>
+          <button class="btn btn-accent mt-2 w-full">Thi Ngay <i class="fa-solid fa-flag-checkered"></i></button>
+        </div>`;
+      }).join('');
+    }
+
+    function getQuestionLabel(type, i, score) {
+      if (type === 'practice') return `Câu ${i+1} (${score}đ)`;
+      if (i < 5) return `Phần I. Đọc hiểu - Câu ${i+1} (${score}đ)`;
+      if (i === 5) return `Phần II. Viết - Câu 1 (${score}đ)`;
+      if (i === 6) return `Phần II. Viết - Câu 2 (${score}đ)`;
+      return `Câu ${i+1} (${score}đ)`;
+    }
+
+    function startWorkspace(type, id) {
+      const exam = DB.find(type==='practice' ? 'practice_exams' : 'mock_exams', x => x.id === id);
+      
+      // Nếu đã làm bài, thì xem lại kết quả
+      const exist = DB.find('results', r => r.examId === id && r.studentId === currentUser.id);
+      if (exist) return reviewWorkspace(exist, exam, type);
+
+      currentWorkspace = { type, exam, seconds: 0 };
+      document.getElementById('ws-title').innerText = exam.title;
+      document.getElementById('ws-passage').innerText = exam.passage;
+      document.getElementById('ws-print-btn').classList.add('hidden');
+      document.getElementById('ws-submit-btn').classList.remove('hidden');
+      document.getElementById('ws-submit-btn').innerText = "Nộp bài";
+      document.getElementById('ws-submit-btn').onclick = submitWorkspace;
+      
+      let qHTML = '';
+      exam.questions.forEach((q, i) => {
+        qHTML += `
+          <div class="question-block">
+            <div class="question-title">${getQuestionLabel(type, i, q.score)}: ${q.q}</div>
+            <textarea class="question-textarea student-ans" placeholder="Nhập câu trả lời của cậu vào đây..."></textarea>
+          </div>`;
+      });
+      document.getElementById('ws-questions').innerHTML = qHTML;
+      document.getElementById('workspace-modal').classList.add('active');
+      enableAntiCheat();
+      
+      currentWorkspace.timer = setInterval(() => {
+        currentWorkspace.seconds++;
+        const m = Math.floor(currentWorkspace.seconds/60).toString().padStart(2,'0'), s = (currentWorkspace.seconds%60).toString().padStart(2,'0');
+        document.getElementById('ws-timer').innerText = `⏱️ ${m}:${s}`;
+      }, 1000);
+    }
+    
+    function closeWorkspace() { 
+      document.getElementById('workspace-modal').classList.remove('active'); 
+      if(currentWorkspace && currentWorkspace.timer) clearInterval(currentWorkspace.timer);
+      currentWorkspace = null; disableAntiCheat();
+    }
+
+    function submitWorkspace() {
+      if(!confirm('Cậu đã chắc chắn muốn nộp bài chưa?')) return;
+      clearInterval(currentWorkspace.timer); disableAntiCheat();
+      const ansEls = document.querySelectorAll('.student-ans');
+      const answers = {};
+      currentWorkspace.exam.questions.forEach((q, i) => {
+        answers[`q${i}`] = { ans: ansEls[i].value, selfScore: 0, teacherScore: 0 };
+      });
+
+      const res = {
+        studentId: currentUser.id, studentName: currentUser.fullName, className: currentUser.className, schoolName: currentUser.schoolName, isClassStudent: currentUser.isClassStudent, classId: currentUser.classId,
+        examType: currentWorkspace.type, examId: currentWorkspace.exam.id, examTitle: currentWorkspace.exam.title, maxScore: currentWorkspace.exam.questions.reduce((a,b)=>a+b.score,0),
+        status: 'pending', answers, timeSpent: currentWorkspace.seconds, submittedAt: Date.now()
+      };
+      
+      if (currentWorkspace.type === 'practice') {
+        // Giao diện Luyện tập: Yêu cầu tự chấm điểm (4 cột)
+        renderSelfGrading(res, currentWorkspace.exam);
+      } else {
+        // Giao diện Thi thử: Nộp ngay, chờ chấm (3 cột)
+        DB.add('results', res);
+        showToast('Nộp bài thi thành công! Chờ cô giáo chấm nhé 🌸');
+        closeWorkspace(); updateDashboard();
+        triggerFlowerRain();
+      }
+    }
+
+    function renderSelfGrading(res, exam) {
+      document.getElementById('ws-title').innerText = "Tự đánh giá: " + exam.title;
+      document.getElementById('ws-submit-btn').innerText = "Lưu Điểm";
+      document.getElementById('ws-submit-btn').onclick = () => saveSelfGrade(res, exam);
+      
+      let html = '<div style="background:var(--warning);padding:12px;border-radius:8px;margin-bottom:20px;"><strong>🌸 Hướng dẫn:</strong> Hãy đối chiếu bài làm với đáp án và tự chọn điểm số mình đánh giá ở Cột 3 nhé!</div>';
+      exam.questions.forEach((q, i) => {
+        const a = res.answers[`q${i}`];
+        let opts = ''; for(let step=0; step<=q.score; step+=0.25) opts += `<option value="${step}">${step}đ</option>`;
+        
+        html += `
+          <div class="question-block" style="border-left:4px solid var(--primary);">
+            <div class="question-title">${getQuestionLabel(res.examType, i, q.score)}: ${q.q}</div>
+            <div class="grading-grid cols-4">
+              <div class="grading-col"><span class="grading-col-title">Cột 1: Bài làm của cậu</span><div class="grading-text">${a.ans || '<i>Trống</i>'}</div></div>
+              <div class="grading-col"><span class="grading-col-title">Cột 2: Đáp án chuẩn</span><div class="grading-text grading-ans">${q.a}</div></div>
+              <div class="grading-col" style="background:#e6f2ff;"><span class="grading-col-title">Cột 3: Cậu tự chấm</span>
+                <select class="score-select self-score-input" data-idx="${i}">${opts}</select>
+              </div>
+              <div class="grading-col"><span class="grading-col-title">Cột 4: Cô Hằng chấm</span><div class="status-badge status-pending">⌛ Chờ chấm</div></div>
+            </div>
+          </div>`;
+      });
+      document.getElementById('ws-questions').innerHTML = html;
+    }
+
+    function saveSelfGrade(res, exam) {
+      let total = 0;
+      document.querySelectorAll('.self-score-input').forEach(sel => {
+        const val = parseFloat(sel.value); total += val;
+        res.answers[`q${sel.dataset.idx}`].selfScore = val;
+      });
+      res.selfScore = total;
+      DB.add('results', res);
+      showToast('Đã lưu điểm tự chấm! Cô Hằng sẽ xem và chấm điểm xếp hạng sau nhé 🌸');
+      closeWorkspace(); updateDashboard();
+      triggerFlowerRain();
+    }
+
+    // --- XEM LẠI BÀI ĐÃ NỘP ---
+    function reviewWorkspace(res, exam, type) {
+      currentWorkspace = { type, exam, seconds: res.timeSpent };
+      document.getElementById('ws-title').innerText = "Xem lại: " + exam.title;
+      const m = Math.floor(res.timeSpent/60).toString().padStart(2,'0'), s = (res.timeSpent%60).toString().padStart(2,'0');
+      document.getElementById('ws-timer').innerText = `⏱️ ${m}:${s}`;
+      document.getElementById('ws-submit-btn').classList.add('hidden');
+      document.getElementById('ws-print-btn').classList.remove('hidden'); // Enable In/PDF
+      document.getElementById('ws-passage').innerText = exam.passage;
+
+      // Xếp hạng đề
+      let rankHtml = '';
+      if (res.status === 'graded') {
+        const examResults = DB.filter('results', r => r.examId === exam.id && r.status === 'graded');
+        examResults.sort((a,b) => b.teacherScore - a.teacherScore || a.timeSpent - b.timeSpent);
+        const myRank = examResults.findIndex(r => r.id === res.id) + 1;
+        rankHtml = `<br>🏆 <strong>Xếp hạng của cậu:</strong> Hạng ${myRank} / ${examResults.length} học sinh.`;
+      }
+
+      let statHtml = res.status === 'graded' ? `<div style="background:var(--success);color:white;padding:16px;border-radius:8px;margin-bottom:20px;font-size:1.1rem;"><strong>🎉 Điểm cô chấm: ${res.teacherScore}/${res.maxScore}đ</strong><br>Lời phê: <i>${res.teacherComment}</i>${rankHtml}</div>` : `<div style="background:var(--warning);padding:16px;border-radius:8px;margin-bottom:20px;">⌛ Bài làm đang chờ cô Hằng chấm để được xếp hạng.</div>`;
+      
+      let html = statHtml;
+      exam.questions.forEach((q, i) => {
+        const a = res.answers[`q${i}`];
+        if (type === 'practice') { // 4 cols
+          html += `
+          <div class="question-block">
+            <div class="question-title">${getQuestionLabel(type, i, q.score)}: ${q.q}</div>
+            <div class="grading-grid cols-4">
+              <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text">${a.ans || '<i>Trống</i>'}</div></div>
+              <div class="grading-col"><span class="grading-col-title">Đáp án</span><div class="grading-text grading-ans">${q.a}</div></div>
+              <div class="grading-col"><span class="grading-col-title">Tự chấm</span><div class="grading-text font-heading text-center" style="font-size:1.2rem;color:var(--primary);">${a.selfScore}đ</div></div>
+              <div class="grading-col"><span class="grading-col-title">Cô chấm</span><div class="grading-text font-heading text-center" style="font-size:1.2rem;color:var(--success);">${res.status==='graded'?a.teacherScore+'đ':'⌛'}</div></div>
+            </div>
+          </div>`;
+        } else { // 3 cols
+          html += `
+          <div class="question-block">
+            <div class="question-title">${getQuestionLabel(type, i, q.score)}: ${q.q}</div>
+            <div class="grading-grid cols-3">
+              <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text">${a.ans || '<i>Trống</i>'}</div></div>
+              <div class="grading-col"><span class="grading-col-title">Đáp án chuẩn</span><div class="grading-text grading-ans">${q.a}</div></div>
+              <div class="grading-col"><span class="grading-col-title">Cô chấm</span><div class="grading-text font-heading text-center" style="font-size:1.2rem;color:var(--success);">${res.status==='graded'?a.teacherScore+'đ':'⌛'}</div></div>
+            </div>
+          </div>`;
+        }
+      });
+      document.getElementById('ws-questions').innerHTML = html;
+      document.getElementById('workspace-modal').classList.add('active');
+    }
+
+    /* --------------------------------------------------------------------------
+       8. TEACHER ADMIN (GÓC SOẠN ĐỀ)
+       -------------------------------------------------------------------------- */
+    let currentAdminTab = 'practice';
+    function switchAdminTab(t) {
+      currentAdminTab = t;
+      document.querySelectorAll('#panel-admin .tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      renderAdminForm();
+    }
+    function renderAdminForm() {
+      const c = document.getElementById('admin-form-container');
+      const isPr = currentAdminTab === 'practice';
+      const count = isPr ? 5 : 7;
+      let html = `
+        <div class="input-group"><label>Tên đề</label><input type="text" id="ad-title" class="input-control" placeholder="VD: ${isPr?'Đề ôn tập số 1: Sang thu':'Đề thi thử Lần 2'}"></div>
+        <div class="flex gap-3 mb-3">
+          ${isPr ? `<div class="input-group" style="flex:1;"><label>Thể loại</label><select id="ad-genre" class="input-control"><option value="tho">Thơ 🌸</option><option value="truyen">Truyện 🍁</option><option value="thong-tin">Thông tin 🌿</option><option value="nghi-luan">Nghị luận 🍀</option></select></div>` : ''}
+          <div class="input-group" style="flex:1;"><label>Cấp độ ôn tập</label><select id="ad-target" class="input-control"><option value="vao-10">Ôn thi vào 10 📝</option><option value="hsg">Ôn thi HSG, chuyên 🏆</option></select></div>
+        </div>
+        <div class="input-group">
+          <label>Ngữ liệu đọc hiểu</label>
+          <textarea id="ad-passage" class="input-control" placeholder="Đoạn văn/thơ ngữ liệu..."></textarea>
+        </div>
+        <hr style="margin:20px 0; border:1px dashed var(--border-color);">
+        <h4 class="font-heading mb-3 text-primary">Phần Câu hỏi & Hướng dẫn chấm</h4>
+      `;
+      
+      const scores = isPr ? [0.75,0.75,1.0,1.0,0.5] : [0.75,0.75,1.0,1.0,0.5,2.0,4.0];
+      for(let i=0; i<count; i++) {
+        html += `
+          <div style="background:var(--bg-color); padding:16px; border-radius:8px; margin-bottom:16px;">
+            <strong>${getQuestionLabel(isPr ? 'practice' : 'mock', i, scores[i])}</strong>
+            <div class="flex gap-3 mt-2">
+              <textarea class="input-control ad-q" style="flex:1;min-height:60px;" placeholder="Nhập câu hỏi..."></textarea>
+              <textarea class="input-control ad-a" style="flex:1;min-height:60px;" placeholder="Nhập đáp án chuẩn / Hướng dẫn chấm..."></textarea>
+              <input type="hidden" class="ad-s" value="${scores[i]}">
+            </div>
+          </div>
+        `;
+      }
+      html += `<button class="btn btn-primary" onclick="saveAdminExam()">Lưu Đề Lên Đám Mây ☁️</button>`;
+      c.innerHTML = html;
+    }
+    
+    let currentEditExamId = null;
+    let currentEditExamType = null;
+    function editExam(type, id) {
+      const exam = DB.find(type==='practice' ? 'practice_exams' : 'mock_exams', x => x.id === id);
+      if(!exam) return;
+      currentEditExamId = id; currentEditExamType = type;
+      nav('admin');
+      switchAdminTab(type === 'practice' ? 'practice' : 'exam');
+      
+      document.getElementById('ad-title').value = exam.title;
+      document.getElementById('ad-target').value = exam.targetGroup || 'vao-10';
+      if(type === 'practice' && exam.genre) document.getElementById('ad-genre').value = exam.genre;
+      document.getElementById('ad-passage').value = exam.passage;
+      const qs = document.querySelectorAll('.ad-q');
+      const as = document.querySelectorAll('.ad-a');
+      exam.questions.forEach((q, i) => {
+        if(qs[i]) qs[i].value = q.q;
+        if(as[i]) as[i].value = q.a;
+      });
+      const btn = document.querySelector('#admin-form-container .btn-primary');
+      if(btn) btn.innerHTML = "Cập nhật Đề thi 💾";
+    }
+    function deleteExam(type, id) {
+      if(!confirm('Chắc chắn xoá đề này?')) return;
+      DB.delete(type==='practice' ? 'practice_exams' : 'mock_exams', id);
+      showToast('Đã xoá đề!');
+      if(type==='practice') filterPractice('vao-10'); else filterExam('vao-10');
+    }
+
+    function saveAdminExam() {
+      const qs = document.querySelectorAll('.ad-q'), as = document.querySelectorAll('.ad-a'), ss = document.querySelectorAll('.ad-s');
+      let questions = [];
+      for(let i=0; i<qs.length; i++) questions.push({ q: qs[i].value, a: as[i].value, score: parseFloat(ss[i].value) });
+      const exam = { title: document.getElementById('ad-title').value, targetGroup: document.getElementById('ad-target').value, passage: document.getElementById('ad-passage').value, questions };
+      if(!exam.title) return showToast('Nhập tên đề nha cô!');
+      
+      if(currentAdminTab === 'practice') { 
+        exam.genre = document.getElementById('ad-genre').value; 
+        if(currentEditExamId && currentEditExamType === 'practice') {
+          DB.update('practice_exams', currentEditExamId, exam); 
+        } else {
+          DB.add('practice_exams', exam); 
+        }
+        filterPractice('vao-10'); 
+      }
+      else { 
+        if(currentEditExamId && currentEditExamType === 'mock') {
+          DB.update('mock_exams', currentEditExamId, exam); 
+        } else {
+          DB.add('mock_exams', exam); 
+        }
+        filterExam('vao-10'); 
+      }
+      showToast(currentEditExamId ? 'Cập nhật đề thành công! 🌻' : 'Đã soạn đề thành công! 🌻');
+      currentEditExamId = null; currentEditExamType = null;
+      renderAdminForm(); 
+    }
+
+    /* --------------------------------------------------------------------------
+       9. TEACHER MANAGE (GÓC QUẢN LÝ LỚP HỌC)
+       -------------------------------------------------------------------------- */
+    function loadManageClasses() {
+      const cls = DB.get('classes');
+      const sel = document.getElementById('manage-select-class');
+      const viewSel = document.getElementById('manage-view-class');
+      let opts = ''; cls.forEach(c => opts += `<option value="${c.id}">${c.name} (${c.year})</option>`);
+      sel.innerHTML = opts; viewSel.innerHTML = '<option value="all">-- Tất cả Học sinh --</option>' + '<option value="free_class">Lớp Tự do</option>' + opts;
+    }
+    function createNewClass() {
+      const n = document.getElementById('manage-new-class-name').value;
+      const y = document.getElementById('manage-new-class-year').value;
+      if(!n) return showToast('Nhập tên lớp nha cô!');
+      DB.add('classes', { id: `${n}_${Date.now()}`, name: n, year: y });
+      loadManageClasses(); showToast(`Đã tạo lớp ${n}! 🍀`);
+      document.getElementById('manage-new-class-name').value = '';
+    }
+    function generateAccounts() {
+      const cid = document.getElementById('manage-select-class').value;
+      const c = DB.find('classes', x=>x.id===cid);
+      if(!c) return showToast('Hãy tạo và chọn lớp trước nha!');
+      const list = document.getElementById('manage-students-list').value.split('\n').filter(x=>x.trim());
+      if(list.length === 0) return showToast('Nhập tên học sinh vào ô văn bản!');
+      list.forEach(name => {
+        const un = name.trim().toLowerCase().replace(/ /g, '') + Math.floor(Math.random()*1000);
+        DB.add('users', { id: un, password: '123', role: 'student', fullName: name.trim(), classId: c.id, className: c.name, schoolName: 'THCS Yên Phong', isClassStudent: true });
+      });
+      document.getElementById('manage-students-list').value = '';
+      showToast(`Tạo thành công ${list.length} tài khoản lớp ${c.name}! ⚡`);
+      renderManageStudents();
+    }
+    function renderManageStudents() {
+      const vid = document.getElementById('manage-view-class').value;
+      let users = DB.filter('users', u => u.role === 'student');
+      if (vid !== 'all') users = users.filter(u => u.classId === vid);
+      
+      document.getElementById('manage-students-body').innerHTML = users.map(u => {
+        return `<tr>
+          <td>${u.fullName}</td><td>${u.className}</td><td>${u.id}</td><td>${u.password || '---'}</td>
+          <td>
+            <button class="btn btn-sm btn-accent" onclick="resetPwd('${u.id}')" title="Đặt lại mật khẩu">🔄</button>
+            <button class="btn btn-sm btn-primary" onclick="gradeStudent('${u.id}')" title="Chấm bài">📝 Chấm</button>
+            ${u.isClassStudent ? `<button class="btn btn-sm btn-secondary" onclick="moveClass('${u.id}')" title="Chuyển lớp">⏩</button>` : ''}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+    function resetPwd(uid) {
+      const newP = prompt('Nhập mật khẩu mới (Để trống sẽ là 123456):', '123456') || '123456';
+      DB.update('users', uid, { password: newP }); renderManageStudents(); showToast('Đặt lại mật khẩu thành công!');
+    }
+    function moveClass(uid) {
+      const cls = DB.get('classes');
+      let text = 'Nhập số tương ứng với lớp muốn chuyển đến:\n';
+      cls.forEach((c, i) => text += `${i+1}. ${c.name} (${c.year})\n`);
+      const choice = parseInt(prompt(text));
+      if(choice > 0 && choice <= cls.length) {
+        const newClass = cls[choice-1];
+        DB.update('users', uid, { classId: newClass.id, className: newClass.name });
+        renderManageStudents(); showToast(`Đã chuyển học sinh sang lớp ${newClass.name}`);
+      }
+    }
+    function exportClassAccounts() {
+      const vid = document.getElementById('manage-view-class').value;
+      let users = DB.filter('users', u => u.role === 'student' && u.isClassStudent);
+      if(vid !== 'all') users = users.filter(u => u.classId === vid);
+      let text = "TÀI KHOẢN VĂN UYỂN\n-----------------\n";
+      users.forEach(u => text += `Họ tên: ${u.fullName} | Lớp: ${u.className} | Tài khoản: ${u.id} | Mật khẩu: ${u.password}\n`);
+      const blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "tai-khoan-lop.txt"; a.click();
+    }
+
+    // TEACHER GRADING (GIÁO VIÊN CHẤM BÀI)
+    let gradingResultId = null;
+    function gradeStudent(uid) {
+      const results = DB.filter('results', r => r.studentId === uid && r.status === 'pending');
+      if(results.length === 0) return showToast('Học sinh này không có bài nào chờ chấm.');
+      const res = results[0]; gradingResultId = res.id;
+      const exam = DB.find(res.examType==='practice' ? 'practice_exams' : 'mock_exams', x => x.id === res.examId);
+      
+      currentWorkspace = { type: res.examType, exam };
+      document.getElementById('ws-title').innerText = "CHẤM BÀI: " + res.studentName + " - " + exam.title;
+      document.getElementById('ws-passage').innerText = exam.passage;
+      document.getElementById('ws-print-btn').classList.add('hidden');
+      document.getElementById('ws-submit-btn').classList.remove('hidden');
+      document.getElementById('ws-submit-btn').innerText = "Xác nhận Điểm";
+      document.getElementById('ws-submit-btn').onclick = saveTeacherGrade;
+      
+      let html = '';
+      exam.questions.forEach((q, i) => {
+        const a = res.answers[`q${i}`];
+        let opts = ''; for(let step=0; step<=q.score; step+=0.25) opts += `<option value="${step}">${step}đ</option>`;
+        
+        if(res.examType === 'practice') { // 4 cols
+          html += `<div class="question-block"><div class="question-title">${getQuestionLabel(res.examType, i, q.score)}: ${q.q}</div><div class="grading-grid cols-4">
+            <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text">${a.ans}</div></div>
+            <div class="grading-col"><span class="grading-col-title">Đáp án chuẩn</span><div class="grading-text grading-ans">${q.a}</div></div>
+            <div class="grading-col"><span class="grading-col-title">Tự chấm</span><div class="grading-text text-center font-heading" style="font-size:1.2rem;">${a.selfScore}đ</div></div>
+            <div class="grading-col" style="background:#fff3cd;"><span class="grading-col-title">Cô chấm</span><select class="score-select teacher-score-input" data-idx="${i}">${opts}</select></div>
+          </div></div>`;
+        } else { // 3 cols
+          html += `<div class="question-block"><div class="question-title">${getQuestionLabel(res.examType, i, q.score)}: ${q.q}</div><div class="grading-grid cols-3">
+            <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text">${a.ans}</div></div>
+            <div class="grading-col"><span class="grading-col-title">Đáp án chuẩn</span><div class="grading-text grading-ans">${q.a}</div></div>
+            <div class="grading-col" style="background:#fff3cd;"><span class="grading-col-title">Cô chấm</span><select class="score-select teacher-score-input" data-idx="${i}">${opts}</select></div>
+          </div></div>`;
+        }
+      });
+      html += `<div class="input-group"><label>Lời phê của cô:</label><input type="text" id="teacher-comment" class="input-control" placeholder="Bài làm tốt, có sự sáng tạo..."></div>`;
+      document.getElementById('ws-questions').innerHTML = html;
+      document.getElementById('workspace-modal').classList.add('active');
+    }
+    function saveTeacherGrade() {
+      const res = DB.find('results', x => x.id === gradingResultId);
+      let total = 0;
+      document.querySelectorAll('.teacher-score-input').forEach(sel => {
+        const val = parseFloat(sel.value); total += val;
+        res.answers[`q${sel.dataset.idx}`].teacherScore = val;
+      });
+      res.teacherScore = total; res.status = 'graded'; res.teacherComment = document.getElementById('teacher-comment').value;
+      DB.update('results', gradingResultId, res);
+      showToast('Đã chấm bài thành công! ✅'); closeWorkspace();
+    }
+
+    /* --------------------------------------------------------------------------
+       10. EFFECTS & INIT
+       -------------------------------------------------------------------------- */
+    function createPetal() {
+      const cont = document.getElementById('falling-container');
+      const p = document.createElement('div');
+      p.className = 'falling-petal'; p.innerText = Math.random()>0.5 ? '🌸' : '🍃';
+      p.style.left = Math.random() * 100 + 'vw';
+      p.style.animationDuration = (Math.random() * 5 + 7) + 's';
+      p.style.opacity = Math.random() * 0.5 + 0.2;
+      p.style.fontSize = (Math.random() * 1 + 0.5) + 'rem';
+      cont.appendChild(p); setTimeout(() => p.remove(), 12000);
+    }
+    setInterval(createPetal, 1500);
+
+    function triggerFlowerRain() {
+      for(let i=0; i<30; i++) { setTimeout(createPetal, i*100); }
+    }
+
+    window.onload = () => {
+      checkAuth();
+      if(currentUser && currentUser.role==='teacher') renderAdminForm();
+    };
+  </script>
+</body>
+</html>
