@@ -6,6 +6,26 @@
   <title>VĂN UYỂN - Nơi chữ nghĩa nở hoa</title>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- ASSIGN EXAM MODAL -->
+  <div class="workspace-overlay" id="assign-modal">
+    <div class="workspace-modal" style="max-width:500px; height:auto; padding:0; border-radius:12px; overflow:hidden;">
+      <div class="workspace-header" style="padding:16px 24px; background:var(--primary); color:white;">
+        <div class="workspace-title" style="font-size:1.2rem; font-family:'Quicksand',sans-serif;">Giao Đề Cho Học Sinh</div>
+      </div>
+      <div class="workspace-body" style="padding:24px; background:white;">
+        <h4 class="font-heading mb-3 text-primary" id="assign-exam-title">Tên đề...</h4>
+        <div class="input-group">
+          <label>Chọn Lớp để Giao đề</label>
+          <select id="assign-select-class" class="input-control"></select>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <button class="btn btn-secondary w-full" onclick="document.getElementById('assign-modal').classList.remove('active')">Huỷ</button>
+          <button class="btn btn-primary w-full" onclick="confirmAssignExam()">Giao Đề ✅</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <style>
     /* ==========================================================================
        CSS VARIABLES & THEME (PASTEL AESTHETIC - KHU VƯỜN VĂN CHƯƠNG)
@@ -137,7 +157,7 @@
     .nav-icon { font-size: 1.2rem; width: 24px; text-align: center; }
 
     .sidebar-footer { padding: 20px; border-top: 1px solid var(--border-color); font-size: 0.85rem; color: var(--text-light); text-align: center; }
-
+    .sidebar-footer a { color: var(--primary); text-decoration: none; font-weight: 600; }
     .main-content {
       flex: 1; margin-left: var(--sidebar-width); position: relative;
     }
@@ -156,13 +176,15 @@
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
     .card {
       background-color: var(--card-bg); border-radius: var(--radius-lg); padding: 24px;
-      box-shadow: var(--shadow-soft); transition: all 0.3s ease; position: relative; border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-soft); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; border: 1px solid var(--border-color);
     }
     .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--secondary); }
     .card-icon { font-size: 2.5rem; margin-bottom: 16px; display: inline-block; }
     .card-title { font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 8px; color: var(--text-main); }
     .card-desc { font-size: 0.95rem; color: var(--text-light); margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .card-badge { position: absolute; top: -12px; right: 20px; background-color: var(--accent); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; box-shadow: 0 4px 8px rgba(240,181,193,0.3); }
+    .card-badge { position: absolute; top: -12px; right: 20px; background-color: var(--accent); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; box-shadow: 0 4px 8px rgba(240,181,193,0.3); z-index: 10; }
+
+    .card.floating-doc:hover { transform: translateY(-10px) rotate(-1deg); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
 
     /* TABS */
     .tabs { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
@@ -198,7 +220,7 @@
     .workspace-title { font-family: var(--font-heading); font-size: 1.4rem; color: var(--primary); font-weight: 700; }
     .workspace-body { display: flex; flex: 1; overflow: hidden; }
     .workspace-left { flex: 1; padding: 32px; overflow-y: auto; background-color: white; font-size: 1.1rem; line-height: 1.8; border-right: 1px solid var(--border-color); }
-    .workspace-right { flex: 1.2; padding: 32px; overflow-y: auto; background-color: var(--bg-color); }
+    .workspace-right { flex: 2; padding: 32px; overflow-y: auto; background-color: var(--bg-color); }
     
     .question-block { background: white; padding: 24px; border-radius: var(--radius-md); margin-bottom: 24px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); }
     .question-title { font-family: var(--font-heading); font-weight: 700; color: var(--primary); margin-bottom: 12px; font-size: 1.1rem; white-space: pre-wrap; }
@@ -274,15 +296,18 @@
        ========================================================================== */
     @media print {
       body * { visibility: hidden; }
-      .workspace-modal, .workspace-modal * { visibility: visible; }
-      .workspace-modal { position: absolute; left: 0; top: 0; width: 100%; height: auto; box-shadow: none; border-radius: 0; overflow: visible; }
+      .workspace-overlay.active, .workspace-modal, .workspace-modal * { visibility: visible; }
+      .workspace-overlay.active { position: static; height: auto; background: none; display: block; z-index: auto; backdrop-filter: none; }
+      .workspace-modal { position: static; width: 100%; height: auto; box-shadow: none; border: none; overflow: visible; animation: none; padding: 0; margin: 0; }
       .workspace-header button, .btn, .mascot, .sidebar, .mobile-header, .timer-badge { display: none !important; }
-      .workspace-body { flex-direction: column; overflow: visible; }
-      .workspace-left, .workspace-right { width: 100%; border: none; padding: 10px; overflow: visible; height: auto; }
-      .question-textarea { border: none; border-bottom: 1px dotted #ccc; background: transparent; padding: 4px; min-height: auto; }
-      .grading-col { page-break-inside: avoid; border: 1px solid #ccc; }
-      .grading-grid { display: block; }
-      .grading-grid > div { margin-bottom: 10px; }
+      .workspace-body { display: block; overflow: visible; padding: 0; }
+      .workspace-left, .workspace-right { width: 100%; border: none; padding: 10px 0; overflow: visible; display: block; }
+      .question-textarea { border: none; border-bottom: 1px dotted #ccc; background: transparent; min-height: auto; resize: none; }
+      .grading-col { page-break-inside: avoid; border: 1px solid #ccc !important; }
+      .question-block { page-break-inside: avoid; border: none !important; box-shadow: none !important; margin-bottom: 30px; }
+      .grading-grid { display: flex !important; gap: 10px !important; }
+      .grading-grid.cols-4 > div, .grading-grid.cols-3 > div { flex: 1; border: 1px solid #000; padding: 8px; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       @page { margin: 1.5cm; }
     }
   </style>
@@ -315,20 +340,47 @@
         <a class="nav-item" onclick="nav('theory')"><span class="nav-icon">🌿</span> Góc kiến thức</a>
         <a class="nav-item" onclick="nav('practice')"><span class="nav-icon">🌸</span> Góc luyện tập</a>
         <a class="nav-item" onclick="nav('exam')"><span class="nav-icon">🍁</span> Góc thi thử</a>
-        <a class="nav-item teacher-only hidden" onclick="nav('admin')"><span class="nav-icon">🌻</span> Góc soạn đề</a>
+        <a class="nav-item student-only hidden" onclick="nav('study')"><span class="nav-icon">📊</span> Góc học tập</a>
         <a class="nav-item teacher-only hidden" onclick="nav('manage')"><span class="nav-icon">🍀</span> Góc quản lý</a>
-        <a class="nav-item" onclick="nav('settings')"><span class="nav-icon">🌼</span> Cài đặt</a>
       </div>
-      <div class="sidebar-footer">👩‍🏫 Hà Thanh Hằng<br>GV Ngữ văn THCS Yên Phong</div>
+      <div class="sidebar-footer">👩‍🏫 <b>Hà Thanh Hằng</b><br>GV Ngữ văn THCS Yên Phong<br><i class="fa-solid fa-phone" style="font-size:0.8rem; margin-top:8px;"></i> <a href="tel:0977099420">0977 099 420</a></div>
     </nav>
 
     <!-- MAIN CONTENT -->
     <main class="main-content">
+      <div class="main-header" style="display:flex; justify-content:flex-end; padding:12px 32px; background:white; border-bottom:1px solid var(--border-color); align-items:center; min-height:60px; gap: 16px;">
+        <!-- NOTIFICATIONS -->
+        <div class="student-only hidden" style="position:relative;">
+          <button class="btn btn-outline" style="border:none; font-size:1.2rem; position:relative; padding:8px;" onclick="document.getElementById('noti-dropdown').classList.toggle('hidden')">
+            <i class="fa-regular fa-bell"></i>
+            <span id="noti-badge" style="position:absolute; top:0; right:0; background:var(--danger); color:white; font-size:0.7rem; font-weight:bold; border-radius:50%; width:18px; height:18px; display:flex; align-items:center; justify-content:center; display:none;">0</span>
+          </button>
+          <div id="noti-dropdown" class="card hidden" style="position:absolute; right:0; top:calc(100% + 5px); min-width:300px; max-width:350px; z-index:100; padding:0; overflow:hidden;">
+            <div style="padding:12px 16px; background:var(--primary); color:white; font-weight:bold;">Thông báo mới</div>
+            <div id="noti-list" style="max-height:300px; overflow-y:auto; padding:8px 0;">
+              <div style="padding:16px; text-align:center; color:var(--text-light); font-size:0.9rem;">Không có thông báo nào.</div>
+            </div>
+          </div>
+        </div>
+        <!-- USER MENU -->
+        <div class="student-only hidden user-menu-dropdown" style="position:relative;">
+          <button class="btn btn-outline" style="font-size:0.95rem; display:flex; align-items:center; gap:8px;" onclick="document.getElementById('student-dropdown').classList.toggle('hidden')">
+            <span id="top-student-name">Học sinh</span> <i class="fa-solid fa-caret-down"></i>
+          </button>
+          <div id="student-dropdown" class="card hidden" style="position:absolute; right:0; top:calc(100% + 5px); min-width:260px; z-index:100; padding:16px;">
+            <h4 class="font-heading mb-2 text-primary">Cài đặt Tài khoản</h4>
+            <div class="input-group"><input type="password" id="setting-old-pwd" class="input-control" placeholder="Mật khẩu cũ" style="padding:6px; font-size:0.9rem;"></div>
+            <div class="input-group"><input type="password" id="setting-new-pwd" class="input-control" placeholder="Mật khẩu mới" style="padding:6px; font-size:0.9rem;"></div>
+            <button class="btn btn-secondary w-full mb-3" style="font-size:0.9rem;" onclick="changePassword()">Đổi Mật Khẩu</button>
+            <button class="btn btn-danger w-full" style="font-size:0.9rem;" onclick="logout()"><i class="fa-solid fa-sign-out-alt"></i> Đăng xuất</button>
+          </div>
+        </div>
+      </div>
       
       <!-- PANEL: HOME -->
       <section class="panel active" id="panel-home">
         <h2 class="section-title">🏡 Chào mừng tới Khu Vườn Văn Chương</h2>
-        <div class="stat-grid">
+        <div class="stat-grid" style="grid-template-columns: 1fr 1fr; max-width: 600px; margin: 0 auto 20px auto;">
           <div class="stat-card">
             <div class="stat-value" id="stat-practice">0</div>
             <div class="stat-label">Đề luyện tập đã làm</div>
@@ -337,27 +389,8 @@
             <div class="stat-value" id="stat-exam">0</div>
             <div class="stat-label">Đề thi thử đã làm</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-value" id="stat-avg">0.0</div>
-            <div class="stat-label">Điểm trung bình</div>
-          </div>
         </div>
         
-        <div class="card">
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="font-heading" style="font-size:1.4rem;color:var(--primary);">🏆 Bảng vàng thành tích</h3>
-            <select class="input-control" style="width:250px;" id="lb-filter" onchange="renderLeaderboard()">
-              <option value="all">Tất cả bài làm (Tổng hợp)</option>
-              <!-- Populated dynamically -->
-            </select>
-          </div>
-          <div style="overflow-x:auto;">
-            <table class="leaderboard-table">
-              <thead><tr><th>Hạng</th><th>Học sinh</th><th>Lớp - Trường</th><th>Đề bài</th><th>Điểm số</th><th>Thời gian</th></tr></thead>
-              <tbody id="lb-body"></tbody>
-            </table>
-          </div>
-        </div>
       </section>
 
       <!-- PANEL: THEORY -->
@@ -379,17 +412,24 @@
 
       <!-- PANEL: PRACTICE -->
       <section class="panel" id="panel-practice">
-        <h2 class="section-title">🌸 Góc Luyện Tập</h2>
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="section-title" style="margin:0;">🌸 Góc Luyện Tập</h2>
+          <button class="btn btn-primary teacher-only hidden" onclick="openAdminModal('practice')"><i class="fa-solid fa-plus"></i> Thêm đề mới</button>
+        </div>
         <div class="tabs">
-          <button class="tab-btn active" onclick="filterPractice('vao-10')">📝 Ôn thi vào 10 (Đại trà)</button>
-          <button class="tab-btn" onclick="filterPractice('hsg')">🏆 Ôn thi HSG, Chuyên</button>
+          <button class="tab-btn active" onclick="filterPractice('doc-hieu')">📖 Thực hành Đọc hiểu (25p)</button>
+          <button class="tab-btn" onclick="filterPractice('viet-doan')">✍️ Viết đoạn văn (35p)</button>
+          <button class="tab-btn" onclick="filterPractice('viet-bai')">📝 Viết bài văn (60p)</button>
         </div>
         <div class="grid" id="practice-grid"></div>
       </section>
 
       <!-- PANEL: EXAM -->
       <section class="panel" id="panel-exam">
-        <h2 class="section-title">🍁 Góc Thi Thử</h2>
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="section-title" style="margin:0;">🍁 Góc Thi Thử</h2>
+          <button class="btn btn-primary teacher-only hidden" onclick="openAdminModal('exam')"><i class="fa-solid fa-plus"></i> Thêm đề mới</button>
+        </div>
         <div class="tabs">
           <button class="tab-btn active" onclick="filterExam('vao-10')">📝 Ôn thi vào 10 (Đại trà)</button>
           <button class="tab-btn" onclick="filterExam('hsg')">🏆 Ôn thi HSG, Chuyên</button>
@@ -397,21 +437,45 @@
         <div class="grid" id="exam-grid"></div>
       </section>
 
-      <!-- PANEL: ADMIN (SOẠN ĐỀ) -->
-      <section class="panel teacher-only hidden" id="panel-admin">
-        <h2 class="section-title">🌻 Góc Soạn Đề</h2>
-        <div class="tabs">
-          <button class="tab-btn active" onclick="switchAdminTab('practice')">🌸 Soạn đề Luyện tập (5 câu)</button>
-          <button class="tab-btn" onclick="switchAdminTab('exam')">🍁 Soạn đề Thi thử (7 câu)</button>
+      <!-- PANEL: STUDY CORNER -->
+      <section class="panel student-only hidden" id="panel-study">
+        <h2 class="section-title mb-3">📊 Góc Học Tập & Tiến Độ</h2>
+        <div class="grid cols-2 mb-4">
+          <div class="card text-center" style="border-left: 4px solid var(--primary);">
+            <div style="font-size:2rem; font-weight:bold; color:var(--primary);" id="st-done">0</div>
+            <div class="text-light mt-1">Số đề đã làm</div>
+          </div>
+          <div class="card text-center" style="border-left: 4px solid var(--danger);">
+            <div style="font-size:2rem; font-weight:bold; color:var(--danger);" id="st-pending">0</div>
+            <div class="text-light mt-1">Đề được giao chưa làm</div>
+          </div>
         </div>
-        <div class="card" id="admin-form-container">
-          <!-- Form generated by JS -->
+        <div class="card">
+          <h3 class="font-heading mb-3 text-primary">Lịch sử làm bài chi tiết</h3>
+          <div style="overflow-x:auto;">
+            <table class="leaderboard-table" style="font-size:0.95rem; min-width:600px;">
+              <thead>
+                <tr>
+                  <th>Tên đề</th>
+                  <th>Phân loại</th>
+                  <th>Điểm số</th>
+                  <th>Trạng thái</th>
+                  <th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="st-history-body">
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
-      <!-- PANEL: MANAGE (QUẢN LÝ LỚP) -->
+      <!-- PANEL: MANAGE (QUẢN LÝ LỚP & CÀI ĐẶT) -->
       <section class="panel teacher-only hidden" id="panel-manage">
-        <h2 class="section-title">🍀 Góc Quản Lý Lớp & Học Sinh</h2>
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="section-title" style="margin:0;">🍀 Góc Quản Lý & Cài Đặt</h2>
+          <button class="btn btn-danger" onclick="logout()"><i class="fa-solid fa-sign-out-alt"></i> Đăng xuất</button>
+        </div>
         <div class="flex gap-4" style="flex-wrap:wrap;">
           <!-- TẠO LỚP & TÀI KHOẢN -->
           <div class="card" style="flex:1; min-width:300px;">
@@ -433,18 +497,19 @@
               <select id="manage-select-class" class="input-control"></select>
             </div>
             <div class="input-group">
-              <label>Danh sách Học sinh (Mỗi dòng 1 tên)</label>
-              <textarea id="manage-students-list" class="input-control" placeholder="Nguyễn Văn A&#10;Trần Thị B"></textarea>
+              <label>Tải lên File Excel danh sách Học sinh (Cột đầu tiên chứa tên)</label>
+              <input type="file" id="manage-students-excel" class="input-control" accept=".xlsx, .xls">
             </div>
             <button class="btn btn-accent w-full" onclick="generateAccounts()">⚡ Tạo Tài Khoản Nhanh</button>
           </div>
 
-          <!-- DANH SÁCH & CHẤM ĐIỂM -->
+          <!-- DANH SÁCH HỌC SINH -->
           <div class="card" style="flex:2; min-width:400px;">
             <div class="flex justify-between items-center mb-3">
               <h3 class="font-heading text-primary">Danh Sách Học Sinh</h3>
               <select id="manage-view-class" class="input-control" style="width:200px;" onchange="renderManageStudents()">
                 <option value="all">-- Tất cả Lớp --</option>
+                <option value="free_class">Lớp Tự do</option>
               </select>
             </div>
             <div style="overflow-x:auto;">
@@ -453,29 +518,8 @@
                 <tbody id="manage-students-body"></tbody>
               </table>
             </div>
-            <button class="btn btn-outline mt-3" onclick="exportClassAccounts()"><i class="fa-solid fa-download"></i> Tải Danh sách (.txt)</button>
+            <button class="btn btn-outline mt-3" onclick="exportClassAccounts()"><i class="fa-solid fa-download"></i> Tải Danh sách Excel (.xlsx)</button>
           </div>
-        </div>
-      </section>
-
-      <!-- PANEL: SETTINGS -->
-      <section class="panel" id="panel-settings">
-        <h2 class="section-title">🌼 Cài đặt</h2>
-        <div class="card" style="max-width:500px; margin:0 auto;">
-          <h3 class="font-heading mb-3 text-primary">Thông Tin Cá Nhân</h3>
-          <div class="text-center mb-3">
-            <div class="sidebar-user-avatar" style="width:80px;height:80px;font-size:2.5rem;margin:0 auto;" id="setting-avatar">🌱</div>
-            <h4 class="mt-2 font-heading" style="font-size:1.2rem;" id="setting-name">Chưa đăng nhập</h4>
-            <p class="text-light" id="setting-desc">...</p>
-          </div>
-          <hr style="margin:20px 0;border:none;border-top:1px solid var(--border-color);">
-          <div class="student-only hidden">
-            <h4 class="font-heading mb-2 text-primary">Đổi Mật Khẩu (Học sinh lớp)</h4>
-            <div class="input-group"><input type="password" id="setting-old-pwd" class="input-control" placeholder="Mật khẩu cũ"></div>
-            <div class="input-group"><input type="password" id="setting-new-pwd" class="input-control" placeholder="Mật khẩu mới"></div>
-            <button class="btn btn-secondary w-full" onclick="changePassword()">Đổi Mật Khẩu</button>
-          </div>
-          <button class="btn btn-danger mt-3 w-full" onclick="logout()"><i class="fa-solid fa-sign-out-alt"></i> Đăng xuất / Trở về Màn hình chính</button>
         </div>
       </section>
 
@@ -492,23 +536,26 @@
       
       <!-- FORM TỰ DO -->
       <div id="form-free">
+        <h2 class="font-heading mb-2 text-primary">🌱 Đăng ký Tài khoản Tự do</h2>
+        <p class="mb-3 text-light" style="font-size:0.9rem;">Dành cho học sinh tự học không có tài khoản của trường</p>
         <div class="input-group">
-          <label>📛 Họ và tên</label>
-          <input type="text" id="free-name" class="input-control" placeholder="Nhập tên của cậu...">
+          <input type="text" id="free-username" class="input-control" placeholder="👤 Tên đăng nhập (viết liền, không dấu)">
         </div>
-        <div class="flex gap-3">
-          <div class="input-group" style="flex:1;"><label>🎒 Lớp</label><input type="text" id="free-class" class="input-control" placeholder="VD: 9A"></div>
-          <div class="input-group" style="flex:1;"><label>🏫 Trường</label><input type="text" id="free-school" class="input-control" placeholder="VD: THCS Yên Phong"></div>
+        <div class="input-group">
+          <input type="password" id="free-password" class="input-control" placeholder="🔒 Mật khẩu">
         </div>
-        <button class="btn btn-primary mt-2 w-full" style="font-size:1.1rem; padding:12px;" onclick="loginFree()">Bắt đầu học ngay 🚀</button>
-        <div class="toggle-login" onclick="toggleLoginForm()">🔑 Đăng nhập Tài khoản Lớp / Giáo viên</div>
+        <div class="input-group">
+          <input type="text" id="free-name" class="input-control" placeholder="📛 Họ và tên đầy đủ">
+        </div>
+        <button class="btn btn-primary mt-2 w-full" style="font-size:1.1rem; padding:12px;" onclick="registerFree()">Tạo tài khoản 🚀</button>
+        <div class="toggle-login" onclick="toggleLoginForm()">🔑 Đã có tài khoản? Đăng nhập ngay</div>
       </div>
 
       <!-- FORM TÀI KHOẢN -->
       <div id="form-account" class="hidden">
         <div class="input-group">
           <label>👤 Tên đăng nhập (Tài khoản lớp / Admin)</label>
-          <input type="text" id="acc-user" class="input-control" placeholder="VD: nguyenvananh hoặc admin@hathanhhang">
+          <input type="text" id="acc-user" class="input-control" placeholder="VD: nguyenvananh hoặc hathanhhangc2yenphong@bacninh.edu.vn">
         </div>
         <div class="input-group">
           <label>🔒 Mật khẩu</label>
@@ -586,6 +633,19 @@
     </div>
   </div>
 
+  <!-- ADMIN MODAL (SOẠN ĐỀ) -->
+  <div class="workspace-overlay" id="admin-modal">
+    <div class="workspace-modal" style="max-width:900px; height:90vh;">
+      <div class="workspace-header">
+        <div class="workspace-title" id="admin-modal-title">🌻 Thêm Đề Mới</div>
+        <button class="btn btn-secondary" onclick="closeAdminModal()">Đóng</button>
+      </div>
+      <div class="workspace-body" style="padding:32px; overflow-y:auto; display:block; background:white;">
+        <div id="admin-form-container"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- MASCOT & TOAST -->
   <div class="mascot" onclick="pokeMascot()">
     <div class="mascot-img" id="mascot-face">🌱</div>
@@ -614,9 +674,17 @@
     };
 
     function seedInitialData() {
-      if (DB.get('users').length === 0) {
-        DB.add('users', { id: 'admin@hathanhhang', password: 'hathanhhangc2yenphong', role: 'teacher', fullName: 'Hà Thanh Hằng', schoolName: 'THCS Yên Phong' });
+      // Force update teacher account to the new credentials
+      let users = DB.get('users');
+      let teacherIdx = users.findIndex(u => u.role === 'teacher');
+      if (teacherIdx > -1) {
+        users[teacherIdx].id = 'hathanhhangc2yenphong@bacninh.edu.vn';
+        users[teacherIdx].password = 'Thanhhang97@';
+        DB.set('users', users);
+      } else {
+        DB.add('users', { id: 'hathanhhangc2yenphong@bacninh.edu.vn', password: 'Thanhhang97@', role: 'teacher', fullName: 'Hà Thanh Hằng', schoolName: 'THCS Yên Phong' });
       }
+
       if (DB.get('theory_articles').length === 0) {
         const defaultTheory = [
           { mainCat: 'doc-hieu', subCat: 'doc-hieu-tho', type: 'core', format: 'text', icon: '🌸', title: 'Tri thức Thơ', desc: 'Đặc trưng thể loại thơ và phương pháp', content: '<h2>Tri thức Thơ</h2><p>Thơ dùng ngôn ngữ cô đọng, giàu nhạc điệu.</p>' },
@@ -651,7 +719,7 @@
       
       const isTeacher = currentUser.role === 'teacher';
       document.querySelectorAll('.teacher-only').forEach(el => isTeacher ? el.classList.remove('hidden') : el.classList.add('hidden'));
-      document.querySelectorAll('.student-only').forEach(el => (!isTeacher && currentUser.isClassStudent) ? el.classList.remove('hidden') : el.classList.add('hidden'));
+      document.querySelectorAll('.student-only').forEach(el => (!isTeacher) ? el.classList.remove('hidden') : el.classList.add('hidden'));
       
       const avatarIcon = isTeacher ? '👩‍🏫' : '🎒';
       const roleText = isTeacher ? 'Giáo viên' : (currentUser.className ? `${currentUser.className} - ${currentUser.schoolName}` : 'Tự do');
@@ -660,10 +728,11 @@
       document.getElementById('nav-username').innerText = currentUser.fullName || currentUser.id;
       document.getElementById('nav-role').innerText = roleText;
       
-      document.getElementById('setting-avatar').innerText = avatarIcon;
-      document.getElementById('setting-name').innerText = currentUser.fullName || currentUser.id;
-      document.getElementById('setting-desc').innerText = isTeacher ? 'Tài khoản Quản trị' : (currentUser.className ? `Lớp ${currentUser.className} | Trường ${currentUser.schoolName}` : 'Tài khoản tự do');
+      if(document.getElementById('top-student-name')) {
+        document.getElementById('top-student-name').innerText = currentUser.fullName || currentUser.id;
+      }
       
+      loadNotifications();
       nav('home');
     }
 
@@ -673,12 +742,16 @@
       fFree.classList.toggle('hidden'); fAcc.classList.toggle('hidden');
     }
 
-    function loginFree() {
+    function registerFree() {
+      const u = document.getElementById('free-username').value.trim().toLowerCase().replace(/ /g, '');
+      const p = document.getElementById('free-password').value.trim();
       const n = document.getElementById('free-name').value.trim();
-      const c = document.getElementById('free-class').value.trim() || 'Tự do';
-      const s = document.getElementById('free-school').value.trim() || 'Tự do';
-      if(!n) return showToast('Cậu chưa nhập họ tên kìa!');
-      currentUser = { id: `free_${Date.now()}`, role: 'student', fullName: n, className: c, schoolName: s, isClassStudent: false, classId: 'free_class' };
+      if(!u || !p || !n) return showToast('Vui lòng nhập đầy đủ thông tin!');
+      if(DB.find('users', x => x.id === u)) return showToast('Tên đăng nhập này đã tồn tại!');
+      
+      const newUser = { id: u, password: p, role: 'student', fullName: n, classId: 'free_class', className: 'Lớp Tự do', schoolName: 'Học sinh Tự do', isClassStudent: false };
+      DB.add('users', newUser);
+      currentUser = newUser;
       sessionStorage.setItem('vu_current_user', JSON.stringify(currentUser));
       checkAuth(); showToast(`Chào mừng cậu, ${n}! 🌱`);
     }
@@ -718,8 +791,9 @@
       
       if(panelId === 'home') updateDashboard();
       if(panelId === 'theory') { const mainTab = document.querySelector('#theory-main-tabs .tab-btn.active'); if(mainTab) mainTab.click(); else selectMainTheoryCategory('doc-hieu'); }
-      if(panelId === 'practice') filterPractice('vao-10');
+      if(panelId === 'practice') filterPractice('doc-hieu');
       if(panelId === 'exam') filterExam('vao-10');
+      if(panelId === 'study') renderStudyCorner();
       if(panelId === 'manage') { loadManageClasses(); renderManageStudents(); }
     }
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebar-overlay').classList.toggle('active'); }
@@ -761,7 +835,7 @@
     }
 
     /* --------------------------------------------------------------------------
-       5. DASHBOARD & LEADERBOARD
+       5. DASHBOARD
        -------------------------------------------------------------------------- */
     function updateDashboard() {
       const results = DB.filter('results', r => r.studentId === currentUser.id);
@@ -769,48 +843,6 @@
       const mx = results.filter(r => r.examType === 'mock');
       document.getElementById('stat-practice').innerText = pr.length;
       document.getElementById('stat-exam').innerText = mx.length;
-      
-      let sum = 0, count = 0;
-      results.forEach(r => { if(r.status === 'graded') { sum += (r.teacherScore / r.maxScore)*10; count++; } });
-      document.getElementById('stat-avg').innerText = count > 0 ? (sum/count).toFixed(1) : '0.0';
-
-      const sel = document.getElementById('lb-filter');
-      const allExams = [...DB.get('practice_exams'), ...DB.get('mock_exams')];
-      sel.innerHTML = '<option value="all">Tất cả bài làm (Tổng hợp)</option>';
-      allExams.forEach(e => { sel.innerHTML += `<option value="${e.id}">${e.title}</option>`; });
-      renderLeaderboard();
-    }
-
-    function renderLeaderboard() {
-      const filterId = document.getElementById('lb-filter').value;
-      const results = DB.get('results').filter(r => r.status === 'graded'); // Only graded by teacher
-      let displayData = [];
-      
-      if (filterId === 'all') {
-        const map = {};
-        results.forEach(r => {
-          if(!map[r.studentId]) map[r.studentId] = { name: r.studentName, class: r.className, school: r.schoolName, totalScore: 0, count: 0, time: 0 };
-          map[r.studentId].totalScore += (r.teacherScore / r.maxScore) * 10;
-          map[r.studentId].count++;
-          map[r.studentId].time += r.timeSpent;
-        });
-        displayData = Object.values(map).map(v => ({ ...v, score: (v.totalScore/v.count).toFixed(2), title: `${v.count} đề` }));
-      } else {
-        const filtered = results.filter(r => r.examId === filterId);
-        displayData = filtered.map(r => ({ name: r.studentName, class: r.className, school: r.schoolName, score: r.teacherScore, time: r.timeSpent, title: r.examTitle }));
-      }
-
-      displayData.sort((a,b) => b.score - a.score || a.time - b.time);
-
-      const tbody = document.getElementById('lb-body');
-      tbody.innerHTML = displayData.map((d, i) => `
-        <tr>
-          <td><span style="display:inline-block;width:24px;height:24px;text-align:center;border-radius:50%;background:${i===0?'#fce2a8':i===1?'#e2e8f0':i===2?'#f3d5b5':'#f0e6e6'};">${i+1}</span></td>
-          <td>${d.name}</td><td>${d.class} - ${d.school}</td><td>${d.title}</td>
-          <td style="color:var(--primary);font-weight:700;">${d.score}đ</td>
-          <td>${Math.floor(d.time/60)}p ${d.time%60}s</td>
-        </tr>
-      `).join('') || '<tr><td colspan="6" class="text-center text-light">Chưa có kết quả nào được chấm.</td></tr>';
     }
 
     /* --------------------------------------------------------------------------
@@ -865,10 +897,10 @@
         let typeBadge = t.format === 'image' ? '🖼️ Ảnh' : t.format === 'pdf' ? '📄 PDF' : t.format === 'link' ? '🔗 Link' : '📝 Bài viết';
         let delBtn = (currentUser.role === 'teacher' && t.type !== 'core') ? `<button class="btn btn-danger btn-sm" style="position:absolute;bottom:10px;right:10px;" onclick="event.stopPropagation(); deleteTheory('${t.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
         return `
-        <div class="card" style="cursor:pointer;" onclick="openTheory('${t.id}')">
+        <div class="card floating-doc" style="cursor:pointer;" onclick="openTheory('${t.id}')">
           <div class="card-badge">${badge} | ${typeBadge}</div>
           <span class="card-icon">${t.icon}</span>
-          <h3 class="card-title">${t.title}</h3>
+          <h3 class="card-title mt-2">${t.title}</h3>
           <p class="card-desc">${t.desc}</p>
           ${delBtn}
         </div>`;
@@ -962,20 +994,50 @@
       const list = DB.filter('practice_exams', x => x.targetGroup === group);
       const icons = {tho:'🌸', truyen:'🍁', 'thong-tin':'🌿', 'nghi-luan':'🍀'};
       document.getElementById('practice-grid').innerHTML = list.map(item => {
-        let teacherActions = '';
+        let actionsHtml = '';
         if(currentUser && currentUser.role === 'teacher') {
-          teacherActions = `<div style="position:absolute;top:10px;right:10px;display:flex;gap:4px;">
-            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); editExam('practice', '${item.id}')"><i class="fa-solid fa-pencil"></i> Sửa</button>
-            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteExam('practice', '${item.id}')"><i class="fa-solid fa-trash"></i> Xoá</button>
-          </div>`;
+          const pending = DB.filter('results', r => r.examId === item.id && r.status === 'pending');
+          let pendingHtml = pending.length > 0 ? `<div class="mt-3 text-left" style="background:#fff3cd; padding:12px; border-radius:8px;">
+              <div class="flex justify-between items-center">
+                <span class="font-heading text-accent" style="font-size:0.95rem;">📥 Có ${pending.length} bài chờ chấm</span>
+                <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); openGradingWorkspace('${pending[0].id}')">Chấm ngay</button>
+              </div>
+            </div>` : `<div class="mt-3 text-light text-center" style="font-size:0.9rem;">✅ Không có bài chờ chấm</div>`;
+            
+          actionsHtml = `
+            <div style="position:absolute;top:10px;right:10px;" class="dropdown-menu-container">
+              <button class="btn btn-sm btn-secondary" style="padding:4px 10px; font-weight:bold;" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('hidden');">...</button>
+              <div class="card hidden" style="position:absolute; right:0; top:32px; min-width:120px; z-index:10; padding:8px; display:flex; flex-direction:column; gap:4px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                <button class="btn btn-sm btn-outline" style="text-align:left;" onclick="event.stopPropagation(); editExam('practice', '${item.id}')"><i class="fa-solid fa-pencil" style="width:16px;"></i> Sửa đề</button>
+                <button class="btn btn-sm btn-outline text-danger" style="text-align:left;" onclick="event.stopPropagation(); deleteExam('practice', '${item.id}')"><i class="fa-solid fa-trash" style="width:16px;"></i> Xoá đề</button>
+                <button class="btn btn-sm btn-primary" style="text-align:left;" onclick="event.stopPropagation(); openAssignModal('practice', '${item.id}', '${item.title.replace(/'/g, "\\'")}')"><i class="fa-solid fa-paper-plane" style="width:16px;"></i> Giao đề</button>
+              </div>
+            </div>` + pendingHtml;
+        } else {
+          const myResults = DB.filter('results', r => r.examId === item.id && r.studentId === currentUser.id);
+          if (myResults.length > 0) {
+            actionsHtml = `<div class="mt-3 text-left">
+              <h4 class="font-heading text-primary mb-1" style="font-size:0.95rem;">📜 Lịch sử làm bài:</h4>
+              <div class="flex flex-col gap-2 mt-1">
+                ${myResults.map(r => `
+                  <button class="btn btn-sm btn-outline w-full" onclick="event.stopPropagation(); reviewWorkspace('${r.id}')" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Lần ${r.attempt || 1}</span>
+                    <span style="color:${r.status === 'graded' ? 'var(--success)' : 'var(--warning)'}; font-weight:bold;">${r.status === 'graded' ? `${r.teacherScore}đ` : '⌛ Chờ chấm'}</span>
+                  </button>
+                `).join('')}
+                <button class="btn btn-primary mt-1 w-full" onclick="event.stopPropagation(); startWorkspace('practice', '${item.id}', true)">Làm lại đề (Lần ${myResults.length + 1})</button>
+              </div>
+            </div>`;
+          } else {
+            actionsHtml = `<button class="btn btn-primary mt-3 w-full" onclick="event.stopPropagation(); startWorkspace('practice', '${item.id}')">Làm bài ngay <i class="fa-solid fa-arrow-right"></i></button>`;
+          }
         }
         return `
-        <div class="card text-center" style="cursor:pointer; position:relative;" onclick="startWorkspace('practice', '${item.id}')">
-          ${teacherActions}
+        <div class="card text-center floating-doc" style="cursor:pointer; position:relative;" onclick="if(currentUser.role!=='teacher'){ if(${currentUser.role !== 'teacher'} && ${!DB.find('results', r => r.examId === item.id && r.studentId === currentUser.id)}) startWorkspace('practice', '${item.id}'); }">
           <span class="card-icon">${icons[item.genre] || '📝'}</span>
-          <h3 class="card-title">${item.title}</h3>
+          <h3 class="card-title mt-2">${item.title}</h3>
           <p class="text-light" style="font-size:0.9rem;">5 câu hỏi | Tổng 4.0 điểm</p>
-          <button class="btn btn-primary mt-2 w-full">Làm bài ngay <i class="fa-solid fa-arrow-right"></i></button>
+          ${actionsHtml}
         </div>`;
       }).join('');
     }
@@ -984,20 +1046,50 @@
       event?.currentTarget?.classList.add('active');
       const list = DB.filter('mock_exams', x => x.targetGroup === group);
       document.getElementById('exam-grid').innerHTML = list.map(item => {
-        let teacherActions = '';
+        let actionsHtml = '';
         if(currentUser && currentUser.role === 'teacher') {
-          teacherActions = `<div style="position:absolute;top:10px;right:10px;display:flex;gap:4px;">
-            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); editExam('mock', '${item.id}')"><i class="fa-solid fa-pencil"></i> Sửa</button>
-            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteExam('mock', '${item.id}')"><i class="fa-solid fa-trash"></i> Xoá</button>
-          </div>`;
+          const pending = DB.filter('results', r => r.examId === item.id && r.status === 'pending');
+          let pendingHtml = pending.length > 0 ? `<div class="mt-3 text-left" style="background:#fff3cd; padding:12px; border-radius:8px;">
+              <div class="flex justify-between items-center">
+                <span class="font-heading text-accent" style="font-size:0.95rem;">📥 Có ${pending.length} bài chờ chấm</span>
+                <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); openGradingWorkspace('${pending[0].id}')">Chấm ngay</button>
+              </div>
+            </div>` : `<div class="mt-3 text-light text-center" style="font-size:0.9rem;">✅ Không có bài chờ chấm</div>`;
+            
+          actionsHtml = `
+            <div style="position:absolute;top:10px;right:10px;" class="dropdown-menu-container">
+              <button class="btn btn-sm btn-secondary" style="padding:4px 10px; font-weight:bold;" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('hidden');">...</button>
+              <div class="card hidden" style="position:absolute; right:0; top:32px; min-width:120px; z-index:10; padding:8px; display:flex; flex-direction:column; gap:4px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                <button class="btn btn-sm btn-outline" style="text-align:left;" onclick="event.stopPropagation(); editExam('mock', '${item.id}')"><i class="fa-solid fa-pencil" style="width:16px;"></i> Sửa đề</button>
+                <button class="btn btn-sm btn-outline text-danger" style="text-align:left;" onclick="event.stopPropagation(); deleteExam('mock', '${item.id}')"><i class="fa-solid fa-trash" style="width:16px;"></i> Xoá đề</button>
+                <button class="btn btn-sm btn-primary" style="text-align:left;" onclick="event.stopPropagation(); openAssignModal('mock', '${item.id}', '${item.title.replace(/'/g, "\\'")}')"><i class="fa-solid fa-paper-plane" style="width:16px;"></i> Giao đề</button>
+              </div>
+            </div>` + pendingHtml;
+        } else {
+          const myResults = DB.filter('results', r => r.examId === item.id && r.studentId === currentUser.id);
+          if (myResults.length > 0) {
+            actionsHtml = `<div class="mt-3 text-left">
+              <h4 class="font-heading text-primary mb-1" style="font-size:0.95rem;">📜 Lịch sử làm bài:</h4>
+              <div class="flex flex-col gap-2 mt-1">
+                ${myResults.map(r => `
+                  <button class="btn btn-sm btn-outline w-full" onclick="event.stopPropagation(); reviewWorkspace('${r.id}')" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Lần ${r.attempt || 1}</span>
+                    <span style="color:${r.status === 'graded' ? 'var(--success)' : 'var(--warning)'}; font-weight:bold;">${r.status === 'graded' ? `${r.teacherScore}đ` : '⌛ Chờ chấm'}</span>
+                  </button>
+                `).join('')}
+                <button class="btn btn-accent mt-1 w-full" onclick="event.stopPropagation(); startWorkspace('mock', '${item.id}', true)">Làm lại đề (Lần ${myResults.length + 1})</button>
+              </div>
+            </div>`;
+          } else {
+            actionsHtml = `<button class="btn btn-accent mt-3 w-full" onclick="event.stopPropagation(); startWorkspace('mock', '${item.id}')">Thi Ngay <i class="fa-solid fa-flag-checkered"></i></button>`;
+          }
         }
         return `
-        <div class="card text-center" style="cursor:pointer; border-color:var(--accent); position:relative;" onclick="startWorkspace('mock', '${item.id}')">
-          ${teacherActions}
+        <div class="card text-center floating-doc" style="cursor:pointer; border-color:var(--accent); position:relative;" onclick="if(currentUser.role!=='teacher'){ if(${currentUser.role !== 'teacher'} && ${!DB.find('results', r => r.examId === item.id && r.studentId === currentUser.id)}) startWorkspace('mock', '${item.id}'); }">
           <span class="card-icon">⏱️</span>
-          <h3 class="card-title">${item.title}</h3>
+          <h3 class="card-title mt-2">${item.title}</h3>
           <p class="text-light" style="font-size:0.9rem;">7 câu hỏi | Tổng 10.0 điểm</p>
-          <button class="btn btn-accent mt-2 w-full">Thi Ngay <i class="fa-solid fa-flag-checkered"></i></button>
+          ${actionsHtml}
         </div>`;
       }).join('');
     }
@@ -1010,37 +1102,82 @@
       return `Câu ${i+1} (${score}đ)`;
     }
 
-    function startWorkspace(type, id) {
+    function startWorkspace(type, id, forceRetake = false) {
       const exam = DB.find(type==='practice' ? 'practice_exams' : 'mock_exams', x => x.id === id);
       
-      // Nếu đã làm bài, thì xem lại kết quả
-      const exist = DB.find('results', r => r.examId === id && r.studentId === currentUser.id);
-      if (exist) return reviewWorkspace(exist, exam, type);
+      const myResults = DB.filter('results', r => r.examId === id && r.studentId === currentUser.id);
+      if (myResults.length > 0 && !forceRetake) return reviewWorkspace(myResults[0].id);
 
-      currentWorkspace = { type, exam, seconds: 0 };
+      let timeLimitSecs = 0;
+      if (type === 'practice') {
+          if (exam.targetGroup === 'doc-hieu') timeLimitSecs = 25 * 60;
+          else if (exam.targetGroup === 'viet-doan') timeLimitSecs = 35 * 60;
+          else if (exam.targetGroup === 'viet-bai') timeLimitSecs = 60 * 60;
+          else timeLimitSecs = 45 * 60; 
+      } else {
+          timeLimitSecs = 120 * 60;
+      }
+
+      currentWorkspace = { type, exam, seconds: timeLimitSecs, elapsed: 0, attempt: myResults.length + 1 };
       document.getElementById('ws-title').innerText = exam.title;
       document.getElementById('ws-passage').innerText = exam.passage;
       document.getElementById('ws-print-btn').classList.add('hidden');
       document.getElementById('ws-submit-btn').classList.remove('hidden');
       document.getElementById('ws-submit-btn').innerText = "Nộp bài";
-      document.getElementById('ws-submit-btn').onclick = submitWorkspace;
+      document.getElementById('ws-submit-btn').onclick = () => submitWorkspace(false);
       
       let qHTML = '';
-      exam.questions.forEach((q, i) => {
-        qHTML += `
-          <div class="question-block">
-            <div class="question-title">${getQuestionLabel(type, i, q.score)}: ${q.q}</div>
-            <textarea class="question-textarea student-ans" placeholder="Nhập câu trả lời của cậu vào đây..."></textarea>
+      if (type === 'practice' && (exam.targetGroup === 'viet-doan' || exam.targetGroup === 'viet-bai')) {
+          document.getElementById('ws-passage').parentElement.style.display = 'none';
+          document.getElementById('ws-questions').style.width = '100%';
+          qHTML = `
+          <div class="question-block" style="flex:1; display:flex; flex-direction:column; height: 100%;">
+            <div class="question-title">Yêu cầu: ${exam.passage}</div>
+            <textarea class="question-textarea student-ans" style="flex:1; min-height:400px; padding:16px; font-size:1.1rem; line-height:1.6;" placeholder="Bắt đầu viết bài của cậu tại đây..."></textarea>
           </div>`;
-      });
+      } else {
+          document.getElementById('ws-passage').parentElement.style.display = 'block';
+          document.getElementById('ws-questions').style.width = '';
+          exam.questions.forEach((q, i) => {
+            qHTML += `
+              <div class="question-block">
+                <div class="question-title">${getQuestionLabel(type, i, q.score)}: ${q.q}</div>
+                <textarea class="question-textarea student-ans" placeholder="Nhập câu trả lời của cậu vào đây..."></textarea>
+              </div>`;
+          });
+      }
+      
       document.getElementById('ws-questions').innerHTML = qHTML;
       document.getElementById('workspace-modal').classList.add('active');
       enableAntiCheat();
       
+      let hasWarned = false;
       currentWorkspace.timer = setInterval(() => {
-        currentWorkspace.seconds++;
-        const m = Math.floor(currentWorkspace.seconds/60).toString().padStart(2,'0'), s = (currentWorkspace.seconds%60).toString().padStart(2,'0');
-        document.getElementById('ws-timer').innerText = `⏱️ ${m}:${s}`;
+        currentWorkspace.elapsed++;
+        currentWorkspace.seconds--;
+        
+        let displaySecs = Math.abs(currentWorkspace.seconds);
+        const m = Math.floor(displaySecs/60).toString().padStart(2,'0'), s = (displaySecs%60).toString().padStart(2,'0');
+        const sign = currentWorkspace.seconds < 0 ? '-' : '';
+        document.getElementById('ws-timer').innerText = `⏱️ ${sign}${m}:${s}`;
+        
+        if (currentWorkspace.seconds < 0) {
+            document.getElementById('ws-timer').style.color = 'var(--danger)';
+            document.getElementById('ws-timer').style.fontWeight = 'bold';
+        } else {
+            document.getElementById('ws-timer').style.color = '';
+            document.getElementById('ws-timer').style.fontWeight = '';
+        }
+        
+        if (currentWorkspace.seconds === 0 && !hasWarned) {
+            hasWarned = true;
+            if (type === 'practice') {
+                showToast('⚠️ Đã hết thời gian làm bài! Hãy cố gắng hoàn thành nhanh nhất có thể nhé!');
+            } else {
+                showToast('⚠️ Đã hết thời gian thi! Hệ thống tự động thu bài.');
+                submitWorkspace(true);
+            }
+        }
       }, 1000);
     }
     
@@ -1050,26 +1187,24 @@
       currentWorkspace = null; disableAntiCheat();
     }
 
-    function submitWorkspace() {
-      if(!confirm('Cậu đã chắc chắn muốn nộp bài chưa?')) return;
+    function submitWorkspace(force = false) {
+      if(!force && !confirm('Cậu đã chắc chắn muốn nộp bài chưa?')) return;
       clearInterval(currentWorkspace.timer); disableAntiCheat();
       const ansEls = document.querySelectorAll('.student-ans');
       const answers = {};
       currentWorkspace.exam.questions.forEach((q, i) => {
-        answers[`q${i}`] = { ans: ansEls[i].value, selfScore: 0, teacherScore: 0 };
+        answers[`q${i}`] = { ans: ansEls[i] ? ansEls[i].value : '', selfScore: 0, teacherScore: 0 };
       });
 
       const res = {
         studentId: currentUser.id, studentName: currentUser.fullName, className: currentUser.className, schoolName: currentUser.schoolName, isClassStudent: currentUser.isClassStudent, classId: currentUser.classId,
         examType: currentWorkspace.type, examId: currentWorkspace.exam.id, examTitle: currentWorkspace.exam.title, maxScore: currentWorkspace.exam.questions.reduce((a,b)=>a+b.score,0),
-        status: 'pending', answers, timeSpent: currentWorkspace.seconds, submittedAt: Date.now()
+        status: 'pending', answers, timeSpent: currentWorkspace.elapsed, submittedAt: Date.now()
       };
       
       if (currentWorkspace.type === 'practice') {
-        // Giao diện Luyện tập: Yêu cầu tự chấm điểm (4 cột)
         renderSelfGrading(res, currentWorkspace.exam);
       } else {
-        // Giao diện Thi thử: Nộp ngay, chờ chấm (3 cột)
         DB.add('results', res);
         showToast('Nộp bài thi thành công! Chờ cô giáo chấm nhé 🌸');
         closeWorkspace(); updateDashboard();
@@ -1083,23 +1218,51 @@
       document.getElementById('ws-submit-btn').onclick = () => saveSelfGrade(res, exam);
       
       let html = '<div style="background:var(--warning);padding:12px;border-radius:8px;margin-bottom:20px;"><strong>🌸 Hướng dẫn:</strong> Hãy đối chiếu bài làm với đáp án và tự chọn điểm số mình đánh giá ở Cột 3 nhé!</div>';
-      exam.questions.forEach((q, i) => {
-        const a = res.answers[`q${i}`];
-        let opts = ''; for(let step=0; step<=q.score; step+=0.25) opts += `<option value="${step}">${step}đ</option>`;
-        
-        html += `
+      
+      if (exam.targetGroup === 'viet-doan' || exam.targetGroup === 'viet-bai') {
+          document.getElementById('ws-passage').parentElement.style.display = 'none';
+          document.getElementById('ws-questions').style.width = '100%';
+          const q = exam.questions[0];
+          const a = res.answers[`q0`];
+          let opts = ''; for(let step=0; step<=q.score; step+=0.25) opts += `<option value="${step}">${step}đ</option>`;
+          html += `
           <div class="question-block" style="border-left:4px solid var(--primary);">
-            <div class="question-title">${getQuestionLabel(res.examType, i, q.score)}: ${q.q}</div>
+            <div class="question-title">Yêu cầu: ${exam.passage}</div>
             <div class="grading-grid cols-4">
-              <div class="grading-col"><span class="grading-col-title">Cột 1: Bài làm của cậu</span><div class="grading-text">${a.ans || '<i>Trống</i>'}</div></div>
-              <div class="grading-col"><span class="grading-col-title">Cột 2: Đáp án chuẩn</span><div class="grading-text grading-ans">${q.a}</div></div>
-              <div class="grading-col" style="background:#e6f2ff;"><span class="grading-col-title">Cột 3: Cậu tự chấm</span>
-                <select class="score-select self-score-input" data-idx="${i}">${opts}</select>
+              <div class="grading-col"><span class="grading-col-title">Cột 1: Bài làm của cậu</span><div class="grading-text" style="white-space:pre-wrap;">${a.ans || '<i>Trống</i>'}</div></div>
+              <div class="grading-col"><span class="grading-col-title">Cột 2: Hướng dẫn chấm</span><div class="grading-text grading-ans" style="white-space:pre-wrap;">${q.a}</div></div>
+              <div class="grading-col"><span class="grading-col-title">Cột 3: Tự chấm điểm</span>
+                <select class="score-select self-score-input" data-idx="0">${opts}</select>
               </div>
-              <div class="grading-col"><span class="grading-col-title">Cột 4: Cô Hằng chấm</span><div class="status-badge status-pending">⌛ Chờ chấm</div></div>
+              <div class="grading-col" style="background:#fff3cd;"><span class="grading-col-title">Cột 4: Cô chấm</span>
+                <div class="grading-text text-center font-heading" style="font-size:1.2rem;color:var(--success);">${res.status==='graded'?a.teacherScore+'đ':'⌛'}</div>
+                ${a.teacherComment ? `<div class="mt-2 text-light" style="font-size:0.85rem; border-top:1px dashed #ccc; padding-top:4px;"><i>Lời phê: ${a.teacherComment}</i></div>` : ''}
+              </div>
             </div>
           </div>`;
-      });
+      } else {
+          document.getElementById('ws-passage').parentElement.style.display = 'block';
+          document.getElementById('ws-questions').style.width = '';
+          exam.questions.forEach((q, i) => {
+            const a = res.answers[`q${i}`];
+            let opts = ''; for(let step=0; step<=q.score; step+=0.25) opts += `<option value="${step}">${step}đ</option>`;
+            html += `
+              <div class="question-block" style="border-left:4px solid var(--primary);">
+                <div class="question-title">${getQuestionLabel(res.examType, i, q.score)}: ${q.q}</div>
+                <div class="grading-grid cols-4">
+                  <div class="grading-col"><span class="grading-col-title">Cột 1: Bài làm của cậu</span><div class="grading-text" style="white-space:pre-wrap;">${a.ans || '<i>Trống</i>'}</div></div>
+                  <div class="grading-col"><span class="grading-col-title">Cột 2: Đáp án chuẩn</span><div class="grading-text grading-ans" style="white-space:pre-wrap;">${q.a}</div></div>
+                  <div class="grading-col"><span class="grading-col-title">Cột 3: Tự chấm điểm</span>
+                    <select class="score-select self-score-input" data-idx="${i}">${opts}</select>
+                  </div>
+                  <div class="grading-col" style="background:#fff3cd;"><span class="grading-col-title">Cột 4: Cô chấm</span>
+                    <div class="grading-text text-center font-heading" style="font-size:1.2rem;color:var(--success);">${res.status==='graded'?a.teacherScore+'đ':'⌛'}</div>
+                    ${a.teacherComment ? `<div class="mt-2 text-light" style="font-size:0.85rem; border-top:1px dashed #ccc; padding-top:4px;"><i>Lời phê: ${a.teacherComment}</i></div>` : ''}
+                  </div>
+                </div>
+              </div>`;
+          });
+      }
       document.getElementById('ws-questions').innerHTML = html;
     }
 
@@ -1117,16 +1280,27 @@
     }
 
     // --- XEM LẠI BÀI ĐÃ NỘP ---
-    function reviewWorkspace(res, exam, type) {
+    function reviewWorkspace(resId) {
+      const res = DB.find('results', r => r.id === resId);
+      const type = res.examType;
+      const exam = DB.find(type==='practice' ? 'practice_exams' : 'mock_exams', x => x.id === res.examId);
+
       currentWorkspace = { type, exam, seconds: res.timeSpent };
-      document.getElementById('ws-title').innerText = "Xem lại: " + exam.title;
+      document.getElementById('ws-title').innerText = "Xem lại: " + exam.title + (res.attempt ? ` (Lần ${res.attempt})` : '');
       const m = Math.floor(res.timeSpent/60).toString().padStart(2,'0'), s = (res.timeSpent%60).toString().padStart(2,'0');
-      document.getElementById('ws-timer').innerText = `⏱️ ${m}:${s}`;
+      document.getElementById('ws-timer').innerText = `⏱️ Đã làm: ${m}:${s}`;
       document.getElementById('ws-submit-btn').classList.add('hidden');
-      document.getElementById('ws-print-btn').classList.remove('hidden'); // Enable In/PDF
+      document.getElementById('ws-print-btn').classList.remove('hidden');
       document.getElementById('ws-passage').innerText = exam.passage;
 
-      // Xếp hạng đề
+      if (type === 'practice' && (exam.targetGroup === 'viet-doan' || exam.targetGroup === 'viet-bai')) {
+          document.getElementById('ws-passage').parentElement.style.display = 'none';
+          document.getElementById('ws-questions').style.width = '100%';
+      } else {
+          document.getElementById('ws-passage').parentElement.style.display = 'block';
+          document.getElementById('ws-questions').style.width = '';
+      }
+
       let rankHtml = '';
       if (res.status === 'graded') {
         const examResults = DB.filter('results', r => r.examId === exam.id && r.status === 'graded');
@@ -1138,31 +1312,56 @@
       let statHtml = res.status === 'graded' ? `<div style="background:var(--success);color:white;padding:16px;border-radius:8px;margin-bottom:20px;font-size:1.1rem;"><strong>🎉 Điểm cô chấm: ${res.teacherScore}/${res.maxScore}đ</strong><br>Lời phê: <i>${res.teacherComment}</i>${rankHtml}</div>` : `<div style="background:var(--warning);padding:16px;border-radius:8px;margin-bottom:20px;">⌛ Bài làm đang chờ cô Hằng chấm để được xếp hạng.</div>`;
       
       let html = statHtml;
-      exam.questions.forEach((q, i) => {
-        const a = res.answers[`q${i}`];
-        if (type === 'practice') { // 4 cols
+      
+      if (type === 'practice' && (exam.targetGroup === 'viet-doan' || exam.targetGroup === 'viet-bai')) {
+          const q = exam.questions[0];
+          const a = res.answers[`q0`];
           html += `
           <div class="question-block">
-            <div class="question-title">${getQuestionLabel(type, i, q.score)}: ${q.q}</div>
+            <div class="question-title">Yêu cầu: ${exam.passage}</div>
             <div class="grading-grid cols-4">
-              <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text">${a.ans || '<i>Trống</i>'}</div></div>
-              <div class="grading-col"><span class="grading-col-title">Đáp án</span><div class="grading-text grading-ans">${q.a}</div></div>
+              <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text" style="white-space:pre-wrap;">${a.ans || '<i>Trống</i>'}</div></div>
+              <div class="grading-col"><span class="grading-col-title">Hướng dẫn chấm</span><div class="grading-text grading-ans" style="white-space:pre-wrap;">${q.a}</div></div>
               <div class="grading-col"><span class="grading-col-title">Tự chấm</span><div class="grading-text font-heading text-center" style="font-size:1.2rem;color:var(--primary);">${a.selfScore}đ</div></div>
-              <div class="grading-col"><span class="grading-col-title">Cô chấm</span><div class="grading-text font-heading text-center" style="font-size:1.2rem;color:var(--success);">${res.status==='graded'?a.teacherScore+'đ':'⌛'}</div></div>
+              <div class="grading-col" style="background:#fff3cd;"><span class="grading-col-title">Cô chấm</span>
+                <div class="grading-text font-heading text-center" style="font-size:1.2rem;color:var(--success);">${res.status==='graded'?a.teacherScore+'đ':'⌛'}</div>
+                ${a.teacherComment ? `<div class="mt-2 text-light" style="font-size:0.85rem; border-top:1px dashed #ccc; padding-top:4px;"><i>Lời phê: ${a.teacherComment}</i></div>` : ''}
+              </div>
             </div>
           </div>`;
-        } else { // 3 cols
-          html += `
-          <div class="question-block">
-            <div class="question-title">${getQuestionLabel(type, i, q.score)}: ${q.q}</div>
-            <div class="grading-grid cols-3">
-              <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text">${a.ans || '<i>Trống</i>'}</div></div>
-              <div class="grading-col"><span class="grading-col-title">Đáp án chuẩn</span><div class="grading-text grading-ans">${q.a}</div></div>
-              <div class="grading-col"><span class="grading-col-title">Cô chấm</span><div class="grading-text font-heading text-center" style="font-size:1.2rem;color:var(--success);">${res.status==='graded'?a.teacherScore+'đ':'⌛'}</div></div>
-            </div>
-          </div>`;
-        }
-      });
+      } else {
+          exam.questions.forEach((q, i) => {
+            const a = res.answers[`q${i}`];
+            if (type === 'practice') { // 4 cols
+              html += `
+              <div class="question-block">
+                <div class="question-title">${getQuestionLabel(type, i, q.score)}: ${q.q}</div>
+                <div class="grading-grid cols-4">
+                  <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text" style="white-space:pre-wrap;">${a.ans || '<i>Trống</i>'}</div></div>
+                  <div class="grading-col"><span class="grading-col-title">Đáp án</span><div class="grading-text grading-ans" style="white-space:pre-wrap;">${q.a}</div></div>
+                  <div class="grading-col"><span class="grading-col-title">Tự chấm</span><div class="grading-text font-heading text-center" style="font-size:1.2rem;color:var(--primary);">${a.selfScore}đ</div></div>
+                  <div class="grading-col" style="background:#fff3cd;"><span class="grading-col-title">Cô chấm</span>
+                    <div class="grading-text font-heading text-center" style="font-size:1.2rem;color:var(--success);">${res.status==='graded'?a.teacherScore+'đ':'⌛'}</div>
+                    ${a.teacherComment ? `<div class="mt-2 text-light" style="font-size:0.85rem; border-top:1px dashed #ccc; padding-top:4px;"><i>Lời phê: ${a.teacherComment}</i></div>` : ''}
+                  </div>
+                </div>
+              </div>`;
+            } else { // 3 cols
+              html += `
+              <div class="question-block">
+                <div class="question-title">${getQuestionLabel(type, i, q.score)}: ${q.q}</div>
+                <div class="grading-grid cols-3">
+                  <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text" style="white-space:pre-wrap;">${a.ans || '<i>Trống</i>'}</div></div>
+                  <div class="grading-col"><span class="grading-col-title">Đáp án chuẩn</span><div class="grading-text grading-ans" style="white-space:pre-wrap;">${q.a}</div></div>
+                  <div class="grading-col" style="background:#fff3cd;"><span class="grading-col-title">Cô chấm</span>
+                    <div class="grading-text text-center font-heading" style="font-size:1.2rem;color:var(--success);">${res.status==='graded'?a.teacherScore+'đ':'⌛'}</div>
+                    ${a.teacherComment ? `<div class="mt-2 text-light" style="font-size:0.85rem; border-top:1px dashed #ccc; padding-top:4px;"><i>Lời phê: ${a.teacherComment}</i></div>` : ''}
+                  </div>
+                </div>
+              </div>`;
+            }
+          });
+      }
       document.getElementById('ws-questions').innerHTML = html;
       document.getElementById('workspace-modal').classList.add('active');
     }
@@ -1170,43 +1369,98 @@
     /* --------------------------------------------------------------------------
        8. TEACHER ADMIN (GÓC SOẠN ĐỀ)
        -------------------------------------------------------------------------- */
-    let currentAdminTab = 'practice';
-    function switchAdminTab(t) {
-      currentAdminTab = t;
-      document.querySelectorAll('#panel-admin .tab-btn').forEach(btn => btn.classList.remove('active'));
-      event.currentTarget.classList.add('active');
-      renderAdminForm();
+    let currentAdminModalType = 'practice';
+    function openAdminModal(type) {
+      currentAdminModalType = type;
+      currentEditExamId = null; currentEditExamType = null;
+      renderAdminModalForm();
+      document.getElementById('admin-modal').classList.add('active');
     }
-    function renderAdminForm() {
+    function closeAdminModal() {
+      document.getElementById('admin-modal').classList.remove('active');
+    }
+
+    function renderAdminModalForm(forceTarget = null) {
       const c = document.getElementById('admin-form-container');
-      const isPr = currentAdminTab === 'practice';
-      const count = isPr ? 5 : 7;
-      let html = `
-        <div class="input-group"><label>Tên đề</label><input type="text" id="ad-title" class="input-control" placeholder="VD: ${isPr?'Đề ôn tập số 1: Sang thu':'Đề thi thử Lần 2'}"></div>
-        <div class="flex gap-3 mb-3">
-          ${isPr ? `<div class="input-group" style="flex:1;"><label>Thể loại</label><select id="ad-genre" class="input-control"><option value="tho">Thơ 🌸</option><option value="truyen">Truyện 🍁</option><option value="thong-tin">Thông tin 🌿</option><option value="nghi-luan">Nghị luận 🍀</option></select></div>` : ''}
-          <div class="input-group" style="flex:1;"><label>Cấp độ ôn tập</label><select id="ad-target" class="input-control"><option value="vao-10">Ôn thi vào 10 📝</option><option value="hsg">Ôn thi HSG, chuyên 🏆</option></select></div>
-        </div>
-        <div class="input-group">
-          <label>Ngữ liệu đọc hiểu</label>
-          <textarea id="ad-passage" class="input-control" placeholder="Đoạn văn/thơ ngữ liệu..."></textarea>
-        </div>
-        <hr style="margin:20px 0; border:1px dashed var(--border-color);">
-        <h4 class="font-heading mb-3 text-primary">Phần Câu hỏi & Hướng dẫn chấm</h4>
-      `;
+      const isPr = currentAdminModalType === 'practice';
       
-      const scores = isPr ? [0.75,0.75,1.0,1.0,0.5] : [0.75,0.75,1.0,1.0,0.5,2.0,4.0];
-      for(let i=0; i<count; i++) {
+      let currentTarget = forceTarget;
+      let oldTitle = '', oldPassage = '', oldGenre = 'tho';
+      if(document.getElementById('ad-title')) {
+          oldTitle = document.getElementById('ad-title').value;
+          const passEl = document.getElementById('ad-passage');
+          if (passEl) oldPassage = passEl.value;
+          const genreEl = document.getElementById('ad-genre');
+          if (isPr && genreEl) oldGenre = genreEl.value;
+      }
+      
+      if (!currentTarget) {
+          const existingSelect = document.getElementById('ad-target');
+          if (existingSelect) currentTarget = existingSelect.value;
+          else currentTarget = isPr ? 'doc-hieu' : 'vao-10';
+      }
+
+      const count = isPr ? 5 : 7;
+      document.getElementById('admin-modal-title').innerText = isPr ? "🌻 Thêm Đề Luyện Tập" : "🌻 Thêm Đề Thi Thử";
+      
+      let html = `
+        <div class="input-group"><label>Tên đề</label><input type="text" id="ad-title" class="input-control" placeholder="VD: ${isPr?'Đề ôn tập số 1: Sang thu':'Đề thi thử Lần 2'}" value="${oldTitle}"></div>
+        <div class="flex gap-3 mb-3">
+          ${isPr ? `<div class="input-group" style="flex:1;"><label>Thể loại</label><select id="ad-genre" class="input-control"><option value="tho" ${oldGenre==='tho'?'selected':''}>Thơ 🌸</option><option value="truyen" ${oldGenre==='truyen'?'selected':''}>Truyện 🍁</option><option value="thong-tin" ${oldGenre==='thong-tin'?'selected':''}>Thông tin 🌿</option><option value="nghi-luan" ${oldGenre==='nghi-luan'?'selected':''}>Nghị luận 🍀</option></select></div>` : ''}
+          <div class="input-group" style="flex:1;">
+            <label>${isPr ? 'Loại bài luyện tập' : 'Cấp độ ôn tập'}</label>
+            <select id="ad-target" class="input-control" onchange="renderAdminModalForm(this.value)">
+              ${isPr ? `
+                <option value="doc-hieu" ${currentTarget==='doc-hieu'?'selected':''}>Thực hành Đọc hiểu (25p) 📖</option>
+                <option value="viet-doan" ${currentTarget==='viet-doan'?'selected':''}>Viết đoạn văn (35p) ✍️</option>
+                <option value="viet-bai" ${currentTarget==='viet-bai'?'selected':''}>Viết bài văn (60p) 📝</option>
+              ` : `
+                <option value="vao-10" ${currentTarget==='vao-10'?'selected':''}>Ôn thi vào 10 📝</option>
+                <option value="hsg" ${currentTarget==='hsg'?'selected':''}>Ôn thi HSG, chuyên 🏆</option>
+              `}
+            </select>
+          </div>
+        </div>
+      `;
+
+      if (isPr && (currentTarget === 'viet-doan' || currentTarget === 'viet-bai')) {
         html += `
+          <div class="input-group">
+            <label>Đề bài (Yêu cầu viết)</label>
+            <textarea id="ad-passage" class="input-control" placeholder="Nhập đề bài vào đây..." style="min-height:100px;">${oldPassage}</textarea>
+          </div>
+          <hr style="margin:20px 0; border:1px dashed var(--border-color);">
+          <h4 class="font-heading mb-3 text-primary">Hướng dẫn chấm</h4>
           <div style="background:var(--bg-color); padding:16px; border-radius:8px; margin-bottom:16px;">
-            <strong>${getQuestionLabel(isPr ? 'practice' : 'mock', i, scores[i])}</strong>
             <div class="flex gap-3 mt-2">
-              <textarea class="input-control ad-q" style="flex:1;min-height:60px;" placeholder="Nhập câu hỏi..."></textarea>
-              <textarea class="input-control ad-a" style="flex:1;min-height:60px;" placeholder="Nhập đáp án chuẩn / Hướng dẫn chấm..."></textarea>
-              <input type="hidden" class="ad-s" value="${scores[i]}">
+              <input type="hidden" class="ad-q" value="Bài Viết">
+              <textarea class="input-control ad-a" style="flex:1;min-height:150px;" placeholder="Nhập dàn ý / Hướng dẫn chấm chi tiết..."></textarea>
+              <input type="hidden" class="ad-s" value="${currentTarget==='viet-doan' ? 2.0 : 5.0}">
             </div>
           </div>
         `;
+      } else {
+        html += `
+          <div class="input-group">
+            <label>Ngữ liệu đọc hiểu</label>
+            <textarea id="ad-passage" class="input-control" placeholder="Đoạn văn/thơ ngữ liệu...">${oldPassage}</textarea>
+          </div>
+          <hr style="margin:20px 0; border:1px dashed var(--border-color);">
+          <h4 class="font-heading mb-3 text-primary">Phần Câu hỏi & Hướng dẫn chấm</h4>
+        `;
+        const scores = isPr ? [0.75,0.75,1.0,1.0,0.5] : [0.75,0.75,1.0,1.0,0.5,2.0,4.0];
+        for(let i=0; i<count; i++) {
+          html += `
+            <div style="background:var(--bg-color); padding:16px; border-radius:8px; margin-bottom:16px;">
+              <strong>${getQuestionLabel(isPr ? 'practice' : 'mock', i, scores[i])}</strong>
+              <div class="flex gap-3 mt-2">
+                <textarea class="input-control ad-q" style="flex:1;min-height:60px;" placeholder="Nhập câu hỏi..."></textarea>
+                <textarea class="input-control ad-a" style="flex:1;min-height:60px;" placeholder="Nhập đáp án chuẩn / Hướng dẫn chấm..."></textarea>
+                <input type="hidden" class="ad-s" value="${scores[i]}">
+              </div>
+            </div>
+          `;
+        }
       }
       html += `<button class="btn btn-primary" onclick="saveAdminExam()">Lưu Đề Lên Đám Mây ☁️</button>`;
       c.innerHTML = html;
@@ -1217,9 +1471,12 @@
     function editExam(type, id) {
       const exam = DB.find(type==='practice' ? 'practice_exams' : 'mock_exams', x => x.id === id);
       if(!exam) return;
+      currentAdminModalType = type;
+      renderAdminModalForm();
+      document.getElementById('admin-modal').classList.add('active');
+      
       currentEditExamId = id; currentEditExamType = type;
-      nav('admin');
-      switchAdminTab(type === 'practice' ? 'practice' : 'exam');
+      document.getElementById('admin-modal-title').innerText = "🌻 Cập Nhật Đề Thi";
       
       document.getElementById('ad-title').value = exam.title;
       document.getElementById('ad-target').value = exam.targetGroup || 'vao-10';
@@ -1236,9 +1493,14 @@
     }
     function deleteExam(type, id) {
       if(!confirm('Chắc chắn xoá đề này?')) return;
-      DB.delete(type==='practice' ? 'practice_exams' : 'mock_exams', id);
+      DB.remove(type==='practice' ? 'practice_exams' : 'mock_exams', id);
       showToast('Đã xoá đề!');
-      if(type==='practice') filterPractice('vao-10'); else filterExam('vao-10');
+      if(type==='practice') {
+          const activeTab = document.querySelector('#panel-practice .tab-btn.active');
+          if (activeTab) activeTab.click(); else filterPractice('doc-hieu');
+      } else {
+          filterExam('vao-10');
+      }
     }
 
     function saveAdminExam() {
@@ -1248,7 +1510,7 @@
       const exam = { title: document.getElementById('ad-title').value, targetGroup: document.getElementById('ad-target').value, passage: document.getElementById('ad-passage').value, questions };
       if(!exam.title) return showToast('Nhập tên đề nha cô!');
       
-      if(currentAdminTab === 'practice') { 
+      if(currentAdminModalType === 'practice') { 
         exam.genre = document.getElementById('ad-genre').value; 
         if(currentEditExamId && currentEditExamType === 'practice') {
           DB.update('practice_exams', currentEditExamId, exam); 
@@ -1267,7 +1529,7 @@
       }
       showToast(currentEditExamId ? 'Cập nhật đề thành công! 🌻' : 'Đã soạn đề thành công! 🌻');
       currentEditExamId = null; currentEditExamType = null;
-      renderAdminForm(); 
+      closeAdminModal();
     }
 
     /* --------------------------------------------------------------------------
@@ -1292,15 +1554,34 @@
       const cid = document.getElementById('manage-select-class').value;
       const c = DB.find('classes', x=>x.id===cid);
       if(!c) return showToast('Hãy tạo và chọn lớp trước nha!');
-      const list = document.getElementById('manage-students-list').value.split('\n').filter(x=>x.trim());
-      if(list.length === 0) return showToast('Nhập tên học sinh vào ô văn bản!');
-      list.forEach(name => {
-        const un = name.trim().toLowerCase().replace(/ /g, '') + Math.floor(Math.random()*1000);
-        DB.add('users', { id: un, password: '123', role: 'student', fullName: name.trim(), classId: c.id, className: c.name, schoolName: 'THCS Yên Phong', isClassStudent: true });
-      });
-      document.getElementById('manage-students-list').value = '';
-      showToast(`Tạo thành công ${list.length} tài khoản lớp ${c.name}! ⚡`);
-      renderManageStudents();
+      const fileInput = document.getElementById('manage-students-excel');
+      if(!fileInput.files || fileInput.files.length === 0) return showToast('Vui lòng chọn file Excel!');
+      
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+        let list = [];
+        for(let i=0; i<json.length; i++) {
+          if(json[i] && json[i][0]) list.push(String(json[i][0]));
+        }
+        list = list.filter(x=>x.trim());
+        if(list.length === 0) return showToast('Không tìm thấy danh sách học sinh trong file!');
+        
+        list.forEach(name => {
+          const removeAccents = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+          const un = removeAccents(name.trim().toLowerCase()).replace(/ /g, '') + Math.floor(10 + Math.random()*90);
+          DB.add('users', { id: un, password: 'demo@123', role: 'student', fullName: name.trim(), classId: c.id, className: c.name, schoolName: 'THCS Yên Phong', isClassStudent: true });
+        });
+        fileInput.value = '';
+        showToast(`Tạo thành công ${list.length} tài khoản lớp ${c.name}! ⚡`);
+        renderManageStudents();
+      };
+      reader.readAsArrayBuffer(file);
     }
     function renderManageStudents() {
       const vid = document.getElementById('manage-view-class').value;
@@ -1314,6 +1595,7 @@
             <button class="btn btn-sm btn-accent" onclick="resetPwd('${u.id}')" title="Đặt lại mật khẩu">🔄</button>
             <button class="btn btn-sm btn-primary" onclick="gradeStudent('${u.id}')" title="Chấm bài">📝 Chấm</button>
             ${u.isClassStudent ? `<button class="btn btn-sm btn-secondary" onclick="moveClass('${u.id}')" title="Chuyển lớp">⏩</button>` : ''}
+            <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')" title="Xoá tài khoản">🗑️</button>
           </td>
         </tr>`;
       }).join('');
@@ -1337,10 +1619,21 @@
       const vid = document.getElementById('manage-view-class').value;
       let users = DB.filter('users', u => u.role === 'student' && u.isClassStudent);
       if(vid !== 'all') users = users.filter(u => u.classId === vid);
-      let text = "TÀI KHOẢN VĂN UYỂN\n-----------------\n";
-      users.forEach(u => text += `Họ tên: ${u.fullName} | Lớp: ${u.className} | Tài khoản: ${u.id} | Mật khẩu: ${u.password}\n`);
-      const blob = new Blob([text], {type: "text/plain;charset=utf-8"});
-      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "tai-khoan-lop.txt"; a.click();
+      const data = users.map((u, i) => ({ "STT": i+1, "Họ Tên": u.fullName, "Lớp": u.className, "Tài Khoản": u.id, "Mật Khẩu": u.password }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Tài Khoản");
+      XLSX.writeFile(wb, "tai-khoan-lop.xlsx");
+    }
+    
+    function deleteUser(uid) {
+      if(!confirm('Bạn có chắc chắn muốn xoá tài khoản học sinh này? Tất cả kết quả bài làm của học sinh cũng sẽ bị xoá.')) return;
+      DB.remove('users', uid);
+      // Clean up results optionally
+      const results = DB.filter('results', r => r.studentId === uid);
+      results.forEach(r => DB.remove('results', r.id));
+      renderManageStudents();
+      showToast('Đã xoá tài khoản thành công!');
     }
 
     // TEACHER GRADING (GIÁO VIÊN CHẤM BÀI)
@@ -1348,7 +1641,12 @@
     function gradeStudent(uid) {
       const results = DB.filter('results', r => r.studentId === uid && r.status === 'pending');
       if(results.length === 0) return showToast('Học sinh này không có bài nào chờ chấm.');
-      const res = results[0]; gradingResultId = res.id;
+      openGradingWorkspace(results[0].id);
+    }
+
+    function openGradingWorkspace(resId) {
+      const res = DB.find('results', r => r.id === resId);
+      gradingResultId = res.id;
       const exam = DB.find(res.examType==='practice' ? 'practice_exams' : 'mock_exams', x => x.id === res.examId);
       
       currentWorkspace = { type: res.examType, exam };
@@ -1359,27 +1657,59 @@
       document.getElementById('ws-submit-btn').innerText = "Xác nhận Điểm";
       document.getElementById('ws-submit-btn').onclick = saveTeacherGrade;
       
+      if (res.examType === 'practice' && (exam.targetGroup === 'viet-doan' || exam.targetGroup === 'viet-bai')) {
+          document.getElementById('ws-passage').parentElement.style.display = 'none';
+          document.getElementById('ws-questions').style.width = '100%';
+      } else {
+          document.getElementById('ws-passage').parentElement.style.display = 'block';
+          document.getElementById('ws-questions').style.width = '';
+      }
+      
       let html = '';
-      exam.questions.forEach((q, i) => {
-        const a = res.answers[`q${i}`];
-        let opts = ''; for(let step=0; step<=q.score; step+=0.25) opts += `<option value="${step}">${step}đ</option>`;
-        
-        if(res.examType === 'practice') { // 4 cols
-          html += `<div class="question-block"><div class="question-title">${getQuestionLabel(res.examType, i, q.score)}: ${q.q}</div><div class="grading-grid cols-4">
-            <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text">${a.ans}</div></div>
-            <div class="grading-col"><span class="grading-col-title">Đáp án chuẩn</span><div class="grading-text grading-ans">${q.a}</div></div>
-            <div class="grading-col"><span class="grading-col-title">Tự chấm</span><div class="grading-text text-center font-heading" style="font-size:1.2rem;">${a.selfScore}đ</div></div>
-            <div class="grading-col" style="background:#fff3cd;"><span class="grading-col-title">Cô chấm</span><select class="score-select teacher-score-input" data-idx="${i}">${opts}</select></div>
-          </div></div>`;
-        } else { // 3 cols
-          html += `<div class="question-block"><div class="question-title">${getQuestionLabel(res.examType, i, q.score)}: ${q.q}</div><div class="grading-grid cols-3">
-            <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text">${a.ans}</div></div>
-            <div class="grading-col"><span class="grading-col-title">Đáp án chuẩn</span><div class="grading-text grading-ans">${q.a}</div></div>
-            <div class="grading-col" style="background:#fff3cd;"><span class="grading-col-title">Cô chấm</span><select class="score-select teacher-score-input" data-idx="${i}">${opts}</select></div>
-          </div></div>`;
-        }
-      });
-      html += `<div class="input-group"><label>Lời phê của cô:</label><input type="text" id="teacher-comment" class="input-control" placeholder="Bài làm tốt, có sự sáng tạo..."></div>`;
+      if (res.examType === 'practice' && (exam.targetGroup === 'viet-doan' || exam.targetGroup === 'viet-bai')) {
+          const q = exam.questions[0];
+          const a = res.answers[`q0`];
+          let opts = ''; for(let step=0; step<=q.score; step+=0.25) opts += `<option value="${step}">${step}đ</option>`;
+          html += `
+          <div class="question-block">
+            <div class="question-title">Yêu cầu: ${exam.passage}</div>
+            <div class="grading-grid cols-4">
+              <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text" style="white-space:pre-wrap;">${a.ans || '<i>Trống</i>'}</div></div>
+              <div class="grading-col"><span class="grading-col-title">Hướng dẫn chấm</span><div class="grading-text grading-ans" style="white-space:pre-wrap;">${q.a}</div></div>
+              <div class="grading-col"><span class="grading-col-title">Tự chấm</span><div class="grading-text font-heading text-center" style="font-size:1.2rem;color:var(--primary);">${a.selfScore}đ</div></div>
+              <div class="grading-col" style="background:#fff3cd;"><span class="grading-col-title">Cô chấm</span>
+                <select class="score-select teacher-score-input" data-idx="0">${opts}</select>
+                <input type="text" class="input-control teacher-comment-input mt-2" data-idx="0" placeholder="Nhận xét câu này..." style="font-size:0.9rem; padding:8px;" value="${a.teacherComment || ''}">
+              </div>
+            </div>
+          </div>`;
+      } else {
+          exam.questions.forEach((q, i) => {
+            const a = res.answers[`q${i}`];
+            let opts = ''; for(let step=0; step<=q.score; step+=0.25) opts += `<option value="${step}">${step}đ</option>`;
+            
+            let gradingCol = `<div class="grading-col" style="background:#fff3cd;"><span class="grading-col-title">Cô chấm</span>
+              <select class="score-select teacher-score-input" data-idx="${i}">${opts}</select>
+              <input type="text" class="input-control teacher-comment-input mt-2" data-idx="${i}" placeholder="Nhận xét câu này..." style="font-size:0.9rem; padding:8px;" value="${a.teacherComment || ''}">
+            </div>`;
+
+            if(res.examType === 'practice') { // 4 cols
+              html += `<div class="question-block"><div class="question-title">${getQuestionLabel(res.examType, i, q.score)}: ${q.q}</div><div class="grading-grid cols-4">
+                <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text" style="white-space:pre-wrap;">${a.ans}</div></div>
+                <div class="grading-col"><span class="grading-col-title">Đáp án chuẩn</span><div class="grading-text grading-ans" style="white-space:pre-wrap;">${q.a}</div></div>
+                <div class="grading-col"><span class="grading-col-title">Tự chấm</span><div class="grading-text font-heading text-center" style="font-size:1.2rem;color:var(--primary);">${a.selfScore}đ</div></div>
+                ${gradingCol}
+              </div></div>`;
+            } else { // 3 cols
+              html += `<div class="question-block"><div class="question-title">${getQuestionLabel(res.examType, i, q.score)}: ${q.q}</div><div class="grading-grid cols-3">
+                <div class="grading-col"><span class="grading-col-title">Bài làm</span><div class="grading-text" style="white-space:pre-wrap;">${a.ans}</div></div>
+                <div class="grading-col"><span class="grading-col-title">Đáp án chuẩn</span><div class="grading-text grading-ans" style="white-space:pre-wrap;">${q.a}</div></div>
+                ${gradingCol}
+              </div></div>`;
+            }
+          });
+      }
+      html += `<div class="input-group"><label>Lời phê tổng hợp (Tuỳ chọn):</label><input type="text" id="teacher-comment" class="input-control" placeholder="Bài làm tốt, cần chú ý thêm phần..." value="${res.teacherComment || ''}"></div>`;
       document.getElementById('ws-questions').innerHTML = html;
       document.getElementById('workspace-modal').classList.add('active');
     }
@@ -1389,14 +1719,124 @@
       document.querySelectorAll('.teacher-score-input').forEach(sel => {
         const val = parseFloat(sel.value); total += val;
         res.answers[`q${sel.dataset.idx}`].teacherScore = val;
+        const cmtInput = document.querySelector(`.teacher-comment-input[data-idx="${sel.dataset.idx}"]`);
+        if(cmtInput) res.answers[`q${sel.dataset.idx}`].teacherComment = cmtInput.value;
       });
       res.teacherScore = total; res.status = 'graded'; res.teacherComment = document.getElementById('teacher-comment').value;
       DB.update('results', gradingResultId, res);
       showToast('Đã chấm bài thành công! ✅'); closeWorkspace();
+      renderManageStudents();
+      const activeTab = document.querySelector('.panel.active .tab-btn.active');
+      if (activeTab) activeTab.click();
     }
 
     /* --------------------------------------------------------------------------
-       10. EFFECTS & INIT
+       10. ASSIGNMENTS & STUDY CORNER (GIAO ĐỀ & GÓC HỌC TẬP)
+       -------------------------------------------------------------------------- */
+    let currentAssignExamId = null;
+    let currentAssignExamType = null;
+    
+    function openAssignModal(type, examId, title) {
+      currentAssignExamType = type;
+      currentAssignExamId = examId;
+      document.getElementById('assign-exam-title').innerText = "Đề: " + title;
+      
+      const cls = DB.get('classes');
+      if(cls.length === 0) return showToast('Cô cần tạo lớp học trước khi giao đề!');
+      
+      let html = '';
+      cls.forEach(c => html += `<option value="${c.id}">${c.name} (${c.year})</option>`);
+      document.getElementById('assign-select-class').innerHTML = html;
+      document.getElementById('assign-modal').classList.add('active');
+    }
+    
+    function confirmAssignExam() {
+      const classId = document.getElementById('assign-select-class').value;
+      if(!classId) return showToast('Vui lòng chọn lớp học!');
+      
+      const className = DB.find('classes', c => c.id === classId)?.name || 'Lớp';
+      const assignObj = {
+        id: 'assign_' + Date.now(),
+        examId: currentAssignExamId,
+        examType: currentAssignExamType,
+        classId: classId,
+        createdAt: Date.now(),
+        examTitle: document.getElementById('assign-exam-title').innerText.replace("Đề: ", "")
+      };
+      DB.add('assignments', assignObj);
+      document.getElementById('assign-modal').classList.remove('active');
+      showToast(`Đã giao đề thành công cho ${className}! ✅`);
+    }
+
+    function loadNotifications() {
+      if(!currentUser || currentUser.role === 'teacher') return;
+      const assignments = DB.filter('assignments', a => a.classId === currentUser.classId);
+      const results = DB.filter('results', r => r.studentId === currentUser.id);
+      
+      // Filter out assignments that the student has already completed
+      const pendingAssignments = assignments.filter(a => !results.some(r => r.examId === a.examId));
+      
+      const badge = document.getElementById('noti-badge');
+      if(pendingAssignments.length > 0) {
+        badge.style.display = 'flex';
+        badge.innerText = pendingAssignments.length;
+      } else {
+        badge.style.display = 'none';
+      }
+      
+      let html = '';
+      if(pendingAssignments.length === 0) {
+        html = `<div style="padding:16px; text-align:center; color:var(--text-light); font-size:0.9rem;">Không có đề nào mới được giao.</div>`;
+      } else {
+        pendingAssignments.sort((a,b) => b.createdAt - a.createdAt).forEach(a => {
+          const dateStr = new Date(a.createdAt).toLocaleDateString('vi-VN');
+          html += `
+          <div style="padding:12px 16px; border-bottom:1px solid var(--border-color); cursor:pointer;" onclick="event.stopPropagation(); document.getElementById('noti-dropdown').classList.add('hidden'); nav('${a.examType === 'practice' ? 'practice' : 'exam'}'); setTimeout(()=>startWorkspace('${a.examType}', '${a.examId}'), 300)">
+            <div style="font-weight:600; font-size:0.9rem; color:var(--text-color);">Cô Hằng vừa giao đề mới:</div>
+            <div style="font-size:0.95rem; color:var(--primary); font-weight:bold; margin-top:4px;">${a.examTitle}</div>
+            <div style="font-size:0.8rem; color:var(--text-light); margin-top:4px;"><i class="fa-regular fa-clock"></i> Ngày giao: ${dateStr}</div>
+          </div>`;
+        });
+      }
+      document.getElementById('noti-list').innerHTML = html;
+    }
+
+    function renderStudyCorner() {
+      if(!currentUser || currentUser.role === 'teacher') return;
+      
+      const results = DB.filter('results', r => r.studentId === currentUser.id);
+      const assignments = DB.filter('assignments', a => a.classId === currentUser.classId);
+      const pendingAssignments = assignments.filter(a => !results.some(r => r.examId === a.examId));
+      
+      let totalExams = results.length;
+      document.getElementById('st-done').innerText = totalExams;
+      document.getElementById('st-pending').innerText = pendingAssignments.length;
+      
+      let historyHtml = '';
+      if(results.length === 0) {
+        historyHtml = `<tr><td colspan="5" class="text-center text-light" style="padding:24px;">Chưa có lịch sử làm bài. Hãy bắt đầu luyện tập nhé!</td></tr>`;
+      } else {
+        results.sort((a,b) => b.submittedAt - a.submittedAt).forEach(r => {
+          const isGraded = r.status === 'graded';
+          const typeStr = r.examType === 'practice' ? 'Luyện tập' : 'Thi thử';
+          const scoreStr = isGraded ? `<span style="color:var(--success); font-weight:bold;">${r.teacherScore}/${r.maxScore}</span>` : `<span style="color:var(--warning); font-weight:bold;">Chờ chấm</span>`;
+          const statusBadge = isGraded ? `<span style="background:var(--success); color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Đã chấm</span>` : `<span style="background:var(--warning); color:white; padding:4px 8px; border-radius:12px; font-size:0.8rem;">Đã nộp</span>`;
+          
+          historyHtml += `
+          <tr>
+            <td style="font-weight:bold; color:var(--primary);">${r.examTitle} ${r.attempt > 1 ? `(Lần ${r.attempt})` : ''}</td>
+            <td>${typeStr}</td>
+            <td>${scoreStr}</td>
+            <td>${statusBadge}</td>
+            <td><button class="btn btn-sm btn-outline" onclick="reviewWorkspace('${r.id}')">Xem bài</button></td>
+          </tr>`;
+        });
+      }
+      document.getElementById('st-history-body').innerHTML = historyHtml;
+    }
+
+    /* --------------------------------------------------------------------------
+       11. EFFECTS & INIT
        -------------------------------------------------------------------------- */
     function createPetal() {
       const cont = document.getElementById('falling-container');
@@ -1416,7 +1856,6 @@
 
     window.onload = () => {
       checkAuth();
-      if(currentUser && currentUser.role==='teacher') renderAdminForm();
     };
   </script>
 </body>
