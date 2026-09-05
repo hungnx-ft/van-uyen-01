@@ -8,6 +8,7 @@ export interface User {
   className?: string
   schoolName?: string
   isClassStudent?: boolean
+  isActive?: boolean
 }
 export interface SchoolClass {
   id: string
@@ -27,6 +28,7 @@ export interface TheoryArticle {
   fileData?: string
 }
 export interface Question {
+  id?: string
   q: string
   a: string
   score: number
@@ -40,6 +42,7 @@ export interface Exam {
   questions: Question[]
 }
 export interface Answer {
+  answerId?: string
   ans: string
   selfScore: number
   teacherScore: number

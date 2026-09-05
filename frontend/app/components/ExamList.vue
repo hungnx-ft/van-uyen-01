@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { Exam, ExamType } from '~/types'
 import { practiceGroups, mockGroups } from '~/utils/exams'
+import { isApiEnabled } from '~/utils/api'
 const props = defineProps<{ type: ExamType }>()
-const { data, upsert, remove, set } = useDatabase(),
+const { data, upsert, remove, set, createRemoteExam, updateRemoteExam, deleteRemoteExam } =
+    useDatabase(),
   { user, isTeacher, requireTeacher } = useAuth(),
   { show } = useToast(),
   { start, openResult } = useWorkspace()
@@ -13,10 +15,13 @@ const group = ref(props.type === 'practice' ? 'doc-hieu' : 'vao-10'),
   assigning = ref<Exam | null>(null)
 const table = computed(() => (props.type === 'practice' ? 'practice_exams' : 'mock_exams'))
 const exams = computed(() => data.value[table.value].filter((e) => e.targetGroup === group.value))
-function save(exam: Exam) {
+async function save(exam: Exam) {
   try {
     requireTeacher()
-    upsert(table.value, exam)
+    if (isApiEnabled()) {
+      if (edit.value) await updateRemoteExam(exam, props.type)
+      else await createRemoteExam(exam, props.type)
+    } else upsert(table.value, exam)
     group.value = exam.targetGroup
     editing.value = false
     show('Đã lưu đề thành công! 🌻')
@@ -24,17 +29,20 @@ function save(exam: Exam) {
     show((e as Error).message)
   }
 }
-function destroy() {
+async function destroy() {
   try {
     requireTeacher()
     if (deleting.value) {
-      remove(table.value, deleting.value.id)
-      set(
-        'assignments',
-        data.value.assignments.filter(
-          (a) => !(a.examId === deleting.value!.id && a.examType === props.type),
-        ),
-      )
+      if (isApiEnabled()) await deleteRemoteExam(deleting.value.id, props.type)
+      else {
+        remove(table.value, deleting.value.id)
+        set(
+          'assignments',
+          data.value.assignments.filter(
+            (a) => !(a.examId === deleting.value!.id && a.examType === props.type),
+          ),
+        )
+      }
     }
     deleting.value = null
   } catch (e) {

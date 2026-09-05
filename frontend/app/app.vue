@@ -1,16 +1,34 @@
 <script setup lang="ts">
-const { ready, error, initialize } = useDatabase(),
-  { restore, user, isTeacher } = useAuth()
+import { tables, versionKey } from '~/utils/storage'
+const { ready, error, initialize, refresh } = useDatabase(),
+  { restore, user, isTeacher, authReady } = useAuth()
 const route = useRoute(),
   { state, close } = useWorkspace()
 const mounted = ref(false)
-onMounted(() => {
+function retry() {
   initialize()
   if (ready.value) restore()
+}
+function syncStorage(event: StorageEvent) {
+  if (event.storageArea !== localStorage) return
+  if (
+    event.key !== null &&
+    event.key !== versionKey &&
+    !tables.some((table) => event.key === `vu_${table}`)
+  )
+    return
+  refresh()
+  if (ready.value) restore()
+}
+onMounted(() => {
+  retry()
   mounted.value = true
+  window.addEventListener('storage', syncStorage)
 })
+onUnmounted(() => window.removeEventListener('storage', syncStorage))
+watch([() => user.value?.id, () => user.value?.role], () => close())
 watchEffect(() => {
-  if (!mounted.value || !ready.value) return
+  if (!mounted.value || !ready.value || !authReady.value) return
   const authPage = ['/login', '/register'].includes(route.path)
   if (!user.value && !authPage) navigateTo('/login')
   else if (user.value && authPage) navigateTo('/')
@@ -18,8 +36,8 @@ watchEffect(() => {
 })
 </script>
 <template>
-  <div v-if="error" class="card" style="margin: 40px" role="alert">{{ error }}</div>
-  <template v-else-if="mounted && ready">
+  <StorageError v-if="error" :message="error" @retry="retry" />
+  <template v-else-if="mounted && ready && authReady">
     <AppShell v-if="user"><NuxtPage /></AppShell>
     <NuxtPage v-else />
     <ExamWorkspace

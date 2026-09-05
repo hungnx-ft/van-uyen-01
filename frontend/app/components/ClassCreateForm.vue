@@ -1,17 +1,20 @@
 <script setup lang="ts">
-const { data, set } = useDatabase(),
+import { isApiEnabled } from '~/utils/api'
+const { data, set, createRemoteClass } = useDatabase(),
   { requireTeacher } = useAuth(),
   { show } = useToast()
 const name = ref(''),
   year = ref('2025-2026')
-function submit() {
+async function submit() {
   try {
     requireTeacher()
     if (!name.value.trim()) return
-    set('classes', [
-      ...data.value.classes,
-      { id: crypto.randomUUID(), name: name.value.trim(), year: year.value.trim() },
-    ])
+    if (isApiEnabled()) await createRemoteClass(name.value.trim(), year.value.trim())
+    else
+      set('classes', [
+        ...data.value.classes,
+        { id: crypto.randomUUID(), name: name.value.trim(), year: year.value.trim() },
+      ])
     name.value = ''
     show('Đã tạo lớp! 🍀')
   } catch (e) {

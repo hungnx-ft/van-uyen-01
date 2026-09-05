@@ -1,22 +1,31 @@
 <script setup lang="ts">
 import type { User } from '~/types'
+import { isApiEnabled } from '~/utils/api'
 const props = defineProps<{ student: User; mode: 'reset' | 'move' }>(),
   emit = defineEmits<{ close: [] }>()
-const { data, upsert } = useDatabase(),
+const { data, upsert, resetRemoteStudentPassword, moveRemoteStudent } = useDatabase(),
   { requireTeacher } = useAuth(),
   { show } = useToast()
 const password = ref(''),
   classId = ref(props.student.classId || data.value.classes[0]?.id || '')
-function submit() {
+async function submit() {
   try {
     requireTeacher()
     if (props.mode === 'reset') {
       if (!password.value.trim()) return
-      upsert('users', { ...props.student, password: password.value })
+      if (isApiEnabled()) await resetRemoteStudentPassword(props.student.id, password.value)
+      else upsert('users', { ...props.student, password: password.value })
     } else {
       const c = data.value.classes.find((c) => c.id === classId.value)
       if (!c) throw new Error('Chọn lớp hợp lệ.')
-      upsert('users', { ...props.student, classId: c.id, className: c.name, isClassStudent: true })
+      if (isApiEnabled()) await moveRemoteStudent(props.student.id, c.id)
+      else
+        upsert('users', {
+          ...props.student,
+          classId: c.id,
+          className: c.name,
+          isClassStudent: true,
+        })
     }
     show('Đã cập nhật học sinh!')
     emit('close')

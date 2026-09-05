@@ -5,27 +5,32 @@ from app.schemas.exam import PracticeExamCreate, PracticeExamBase, MockExamCreat
 
 class CRUDPracticeExam(CRUDBase[PracticeExam, PracticeExamBase, PracticeExamBase]):
     def create_with_teacher(self, db: Session, *, obj_in: PracticeExamCreate, teacher_id: int) -> PracticeExam:
-        db_obj = PracticeExam(title=obj_in.title, teacher_id=teacher_id)
+        db_obj = PracticeExam(title=obj_in.title, teacher_id=teacher_id,
+                              target_group=obj_in.target_group, passage=obj_in.passage,
+                              genre=obj_in.genre)
         db.add(db_obj)
-        db.commit()
+        db.flush()
         db.refresh(db_obj)
         
         for q_in in obj_in.questions:
             db_q = PracticeQuestion(
                 exam_id=db_obj.id,
                 content=q_in.content,
-                max_score=q_in.max_score
+                max_score=q_in.max_score,
+                answer_key=q_in.answer_key,
             )
             db.add(db_q)
-        db.commit()
+        db.flush()
         db.refresh(db_obj)
         return db_obj
 
 class CRUDMockExam(CRUDBase[MockExam, MockExamBase, MockExamBase]):
     def create_with_teacher(self, db: Session, *, obj_in: MockExamCreate, teacher_id: int) -> MockExam:
-        db_obj = MockExam(title=obj_in.title, teacher_id=teacher_id)
+        db_obj = MockExam(title=obj_in.title, teacher_id=teacher_id,
+                          target_group=obj_in.target_group, passage=obj_in.passage,
+                          genre=obj_in.genre)
         db.add(db_obj)
-        db.commit()
+        db.flush()
         db.refresh(db_obj)
         
         for q_in in obj_in.questions:
@@ -33,10 +38,11 @@ class CRUDMockExam(CRUDBase[MockExam, MockExamBase, MockExamBase]):
                 exam_id=db_obj.id,
                 section=q_in.section,
                 content=q_in.content,
-                max_score=q_in.max_score
+                max_score=q_in.max_score,
+                answer_key=q_in.answer_key,
             )
             db.add(db_q)
-        db.commit()
+        db.flush()
         db.refresh(db_obj)
         return db_obj
 

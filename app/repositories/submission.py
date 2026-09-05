@@ -12,10 +12,12 @@ class CRUDSubmission(CRUDBase[Submission, SubmissionCreate, BaseModel]):
             exam_type=obj_in.exam_type,
             practice_exam_id=obj_in.practice_exam_id,
             mock_exam_id=obj_in.mock_exam_id,
+            attempt=obj_in.attempt,
+            submitted_at=obj_in.submitted_at,
             status="Submitted"
         )
         db.add(db_obj)
-        db.commit()
+        db.flush()
         db.refresh(db_obj)
         
         for a_in in obj_in.answers:
@@ -26,14 +28,14 @@ class CRUDSubmission(CRUDBase[Submission, SubmissionCreate, BaseModel]):
                 student_answer=a_in.student_answer
             )
             db.add(db_a)
-        db.commit()
+        db.flush()
         db.refresh(db_obj)
         return db_obj
 
     def get_by_student(self, db: Session, *, student_id: int) -> List[Submission]:
         return db.query(Submission).filter(Submission.student_id == student_id).all()
         
-    def grade_submission(self, db: Session, *, db_obj: Submission, scores_in: List[SubmissionScoreCreate], teacher_id: int) -> Submission:
+    def grade_submission(self, db: Session, *, db_obj: Submission, scores_in: List[SubmissionScoreCreate], teacher_id: int, teacher_comment: str | None = None) -> Submission:
         for score_in in scores_in:
             db_score = SubmissionScore(
                 submission_id=db_obj.id,
@@ -44,8 +46,10 @@ class CRUDSubmission(CRUDBase[Submission, SubmissionCreate, BaseModel]):
             )
             db.add(db_score)
         db_obj.status = "Graded"
+        db_obj.teacher_score = sum(score.score for score in scores_in)
+        db_obj.teacher_comment = teacher_comment
         db.add(db_obj)
-        db.commit()
+        db.flush()
         db.refresh(db_obj)
         return db_obj
 

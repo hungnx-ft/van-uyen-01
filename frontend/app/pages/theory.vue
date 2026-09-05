@@ -1,32 +1,44 @@
 <script setup lang="ts">
 import type { TheoryArticle } from '~/types'
 import { mainCategories, subCategories } from '~/utils/exams'
-const { data, upsert, remove } = useDatabase(),
+import { isApiEnabled } from '~/utils/api'
+const { data, upsert, remove, createRemoteTheory, updateRemoteTheory, deleteRemoteTheory } =
+    useDatabase(),
   { isTeacher, requireTeacher } = useAuth(),
   { show } = useToast()
 const main = ref('doc-hieu'),
   sub = ref('doc-hieu-tho'),
-  editing = ref(false),
+  editing = ref<TheoryArticle | null>(null),
   reading = ref<TheoryArticle | null>(null),
   deleting = ref<TheoryArticle | null>(null)
 watch(main, (value) => (sub.value = subCategories[value]?.[0]?.id || ''))
 const articles = computed(() => data.value.theory_articles.filter((t) => t.subCat === sub.value))
-function save(article: TheoryArticle) {
+function newArticle(): TheoryArticle {
+  return { id: crypto.randomUUID(), title: '', mainCat: main.value, subCat: sub.value, type: 'reference', format: 'text', icon: '📚', desc: '', content: '' }
+}
+async function save(article: TheoryArticle) {
   try {
     requireTeacher()
-    upsert('theory_articles', article)
+    if (isApiEnabled()) {
+      if (data.value.theory_articles.some((item) => item.id === article.id))
+        await updateRemoteTheory(article)
+      else await createRemoteTheory(article)
+    } else upsert('theory_articles', article)
     main.value = article.mainCat
     nextTick(() => (sub.value = article.subCat))
-    editing.value = false
+    editing.value = null
     show('Đăng bài thành công! 🌿')
   } catch (e) {
     show((e as Error).message)
   }
 }
-function destroy() {
+async function destroy() {
   try {
     requireTeacher()
-    if (deleting.value) remove('theory_articles', deleting.value.id)
+    if (deleting.value) {
+      if (isApiEnabled()) await deleteRemoteTheory(deleting.value.id)
+      else remove('theory_articles', deleting.value.id)
+    }
     deleting.value = null
   } catch (e) {
     show((e as Error).message)
@@ -37,7 +49,11 @@ function destroy() {
   <section class="panel">
     <div class="flex justify-between items-center mb-3">
       <h2 class="section-title" style="margin: 0">🌿 Góc Kiến Thức</h2>
-      <button v-if="isTeacher" class="btn btn-primary" @click="editing = true">
+      <button
+        v-if="isTeacher"
+        class="btn btn-primary"
+        @click="editing = newArticle()"
+      >
         ＋ Đăng bài viết
       </button>
     </div>
@@ -50,6 +66,7 @@ function destroy() {
         :article="article"
         :teacher="isTeacher"
         @open="reading = article"
+        @edit="editing = article"
         @remove="deleting = article"
       />
       <p v-if="!articles.length" class="empty-state">Chưa có bài viết nào.</p>
@@ -59,8 +76,9 @@ function destroy() {
       v-if="editing && isTeacher"
       :category="main"
       :subcategory="sub"
+      :article="editing.title ? editing : undefined"
       @save="save"
-      @close="editing = false"
+      @close="editing = null"
     />
     <ConfirmDialog
       v-if="deleting"

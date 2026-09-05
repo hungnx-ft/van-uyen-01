@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TheoryArticle } from '~/types'
 defineProps<{ article: TheoryArticle; teacher: boolean }>()
-defineEmits<{ open: []; remove: [] }>()
+defineEmits<{ open: []; edit: []; remove: [] }>()
 </script>
 <template>
   <div
@@ -25,12 +25,9 @@ defineEmits<{ open: []; remove: [] }>()
     <span class="card-icon">{{ article.icon }}</span>
     <h3 class="card-title mt-2">{{ article.title }}</h3>
     <p class="card-desc">{{ article.desc }}</p>
-    <button
-      v-if="teacher && article.type !== 'core'"
-      class="btn btn-danger btn-sm mt-2"
-      @click.stop="$emit('remove')"
-    >
-      Xóa bài
-    </button>
+    <template v-if="teacher && article.type !== 'core'">
+      <button class="btn btn-outline btn-sm mt-2" @click.stop="$emit('edit')">Sửa bài</button>
+      <button class="btn btn-danger btn-sm mt-2" @click.stop="$emit('remove')">Xóa bài</button>
+    </template>
   </div>
 </template>

@@ -56,7 +56,18 @@ describe('legacy browser storage', () => {
   }
   it('reads and preserves legacy IDs and related records', () => {
     const s = storage()
-    s.setItem('vu_users', JSON.stringify([{ id: 'old-student', classId: 'old-class' }]))
+    s.setItem(
+      'vu_users',
+      JSON.stringify([
+        {
+          id: 'old-student',
+          classId: 'old-class',
+          role: 'student',
+          password: 'test',
+          fullName: 'Học sinh',
+        },
+      ]),
+    )
     s.setItem('vu_classes', JSON.stringify([{ id: 'old-class', name: '9A' }]))
     const db = readDatabase(s)
     expect(db.users[0]?.classId).toBe(db.classes[0]?.id)

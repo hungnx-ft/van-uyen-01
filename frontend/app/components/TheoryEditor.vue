@@ -1,21 +1,25 @@
 <script setup lang="ts">
 import type { TheoryArticle } from '~/types'
 import { mainCategories, subCategories } from '~/utils/exams'
-const props = defineProps<{ category: string; subcategory: string }>(),
+const props = defineProps<{ category: string; subcategory: string; article?: TheoryArticle }>(),
   emit = defineEmits<{ save: [article: TheoryArticle]; close: [] }>()
 const { show } = useToast()
-const article = reactive<TheoryArticle>({
-  id: crypto.randomUUID(),
-  title: '',
-  mainCat: props.category,
-  subCat: props.subcategory,
-  type: 'reference',
-  format: 'text',
-  icon: '📚',
-  desc: '',
-  content: '',
-  fileData: '',
-})
+const article = reactive<TheoryArticle>(
+  props.article
+    ? JSON.parse(JSON.stringify(props.article))
+    : {
+        id: crypto.randomUUID(),
+        title: '',
+        mainCat: props.category,
+        subCat: props.subcategory,
+        type: 'reference',
+        format: 'text',
+        icon: '📚',
+        desc: '',
+        content: '',
+        fileData: '',
+      },
+)
 const loading = ref(false)
 watch(
   () => article.mainCat,
@@ -63,7 +67,10 @@ function submit() {
 }
 </script>
 <template>
-  <BaseModal title="Đăng Bài Viết Kiến Thức" @close="emit('close')">
+  <BaseModal
+    :title="article.title ? 'Sửa Bài Viết Kiến Thức' : 'Đăng Bài Viết Kiến Thức'"
+    @close="emit('close')"
+  >
     <form class="modal-content" @submit.prevent="submit">
       <div class="input-group">
         <label>

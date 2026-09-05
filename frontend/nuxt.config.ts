@@ -2,6 +2,13 @@ export default defineNuxtConfig({
   ssr: false,
   compatibilityDate: '2026-09-05',
   devtools: { enabled: false },
+  runtimeConfig: {
+    public: {
+      // Nuxt maps NUXT_PUBLIC_API_BASE into public runtime config at startup.
+      // An empty default keeps the offline LocalStorage mode available.
+      apiBase: '',
+    },
+  },
   css: ['~/assets/css/main.css'],
   app: {
     head: {

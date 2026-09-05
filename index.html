@@ -6,7 +6,6 @@
   <title>VĂN UYỂN - Nơi chữ nghĩa nở hoa</title>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- ASSIGN EXAM MODAL -->
   <div class="workspace-overlay" id="assign-modal">
     <div class="workspace-modal" style="max-width:500px; height:auto; padding:0; border-radius:12px; overflow:hidden;">
@@ -491,16 +490,6 @@
             <button class="btn btn-primary w-full" onclick="createNewClass()">Tạo Lớp</button>
             <hr style="margin:20px 0; border:none; border-top:1px dashed var(--border-color);">
             
-            <h3 class="font-heading mb-3 text-primary">Tạo Tài Khoản Hàng Loạt</h3>
-            <div class="input-group">
-              <label>Chọn Lớp</label>
-              <select id="manage-select-class" class="input-control"></select>
-            </div>
-            <div class="input-group">
-              <label>Tải lên File Excel danh sách Học sinh (Cột đầu tiên chứa tên)</label>
-              <input type="file" id="manage-students-excel" class="input-control" accept=".xlsx, .xls">
-            </div>
-            <button class="btn btn-accent w-full" onclick="generateAccounts()">⚡ Tạo Tài Khoản Nhanh</button>
           </div>
 
           <!-- DANH SÁCH HỌC SINH -->
@@ -518,7 +507,6 @@
                 <tbody id="manage-students-body"></tbody>
               </table>
             </div>
-            <button class="btn btn-outline mt-3" onclick="exportClassAccounts()"><i class="fa-solid fa-download"></i> Tải Danh sách Excel (.xlsx)</button>
           </div>
         </div>
       </section>
@@ -1537,10 +1525,9 @@
        -------------------------------------------------------------------------- */
     function loadManageClasses() {
       const cls = DB.get('classes');
-      const sel = document.getElementById('manage-select-class');
       const viewSel = document.getElementById('manage-view-class');
       let opts = ''; cls.forEach(c => opts += `<option value="${c.id}">${c.name} (${c.year})</option>`);
-      sel.innerHTML = opts; viewSel.innerHTML = '<option value="all">-- Tất cả Học sinh --</option>' + '<option value="free_class">Lớp Tự do</option>' + opts;
+      viewSel.innerHTML = '<option value="all">-- Tất cả Học sinh --</option>' + '<option value="free_class">Lớp Tự do</option>' + opts;
     }
     function createNewClass() {
       const n = document.getElementById('manage-new-class-name').value;
@@ -1549,39 +1536,6 @@
       DB.add('classes', { id: `${n}_${Date.now()}`, name: n, year: y });
       loadManageClasses(); showToast(`Đã tạo lớp ${n}! 🍀`);
       document.getElementById('manage-new-class-name').value = '';
-    }
-    function generateAccounts() {
-      const cid = document.getElementById('manage-select-class').value;
-      const c = DB.find('classes', x=>x.id===cid);
-      if(!c) return showToast('Hãy tạo và chọn lớp trước nha!');
-      const fileInput = document.getElementById('manage-students-excel');
-      if(!fileInput.files || fileInput.files.length === 0) return showToast('Vui lòng chọn file Excel!');
-      
-      const file = fileInput.files[0];
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
-        let list = [];
-        for(let i=0; i<json.length; i++) {
-          if(json[i] && json[i][0]) list.push(String(json[i][0]));
-        }
-        list = list.filter(x=>x.trim());
-        if(list.length === 0) return showToast('Không tìm thấy danh sách học sinh trong file!');
-        
-        list.forEach(name => {
-          const removeAccents = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
-          const un = removeAccents(name.trim().toLowerCase()).replace(/ /g, '') + Math.floor(10 + Math.random()*90);
-          DB.add('users', { id: un, password: 'demo@123', role: 'student', fullName: name.trim(), classId: c.id, className: c.name, schoolName: 'THCS Yên Phong', isClassStudent: true });
-        });
-        fileInput.value = '';
-        showToast(`Tạo thành công ${list.length} tài khoản lớp ${c.name}! ⚡`);
-        renderManageStudents();
-      };
-      reader.readAsArrayBuffer(file);
     }
     function renderManageStudents() {
       const vid = document.getElementById('manage-view-class').value;
@@ -1614,16 +1568,6 @@
         DB.update('users', uid, { classId: newClass.id, className: newClass.name });
         renderManageStudents(); showToast(`Đã chuyển học sinh sang lớp ${newClass.name}`);
       }
-    }
-    function exportClassAccounts() {
-      const vid = document.getElementById('manage-view-class').value;
-      let users = DB.filter('users', u => u.role === 'student' && u.isClassStudent);
-      if(vid !== 'all') users = users.filter(u => u.classId === vid);
-      const data = users.map((u, i) => ({ "STT": i+1, "Họ Tên": u.fullName, "Lớp": u.className, "Tài Khoản": u.id, "Mật Khẩu": u.password }));
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Tài Khoản");
-      XLSX.writeFile(wb, "tai-khoan-lop.xlsx");
     }
     
     function deleteUser(uid) {

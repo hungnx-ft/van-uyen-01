@@ -5,6 +5,7 @@ from datetime import datetime
 class PracticeQuestionBase(BaseModel):
     content: str
     max_score: float = 0.8
+    answer_key: str = ""
 
 class PracticeQuestionCreate(PracticeQuestionBase):
     pass
@@ -16,6 +17,9 @@ class PracticeQuestionResponse(PracticeQuestionBase):
 
 class PracticeExamBase(BaseModel):
     title: str
+    target_group: Optional[str] = None
+    passage: str = ""
+    genre: Optional[str] = None
 
 class PracticeExamCreate(PracticeExamBase):
     questions: List[PracticeQuestionCreate]
@@ -31,6 +35,7 @@ class MockQuestionBase(BaseModel):
     section: int
     content: str
     max_score: float
+    answer_key: str = ""
 
 class MockQuestionCreate(MockQuestionBase):
     pass
@@ -42,6 +47,9 @@ class MockQuestionResponse(MockQuestionBase):
 
 class MockExamBase(BaseModel):
     title: str
+    target_group: Optional[str] = None
+    passage: str = ""
+    genre: Optional[str] = None
 
 class MockExamCreate(MockExamBase):
     questions: List[MockQuestionCreate]

@@ -4,6 +4,7 @@ defineProps<{ students: User[] }>()
 defineEmits<{
   reset: [user: User]
   move: [user: User]
+  toggle: [user: User]
   remove: [user: User]
   grade: [user: User]
 }>()
@@ -22,7 +23,10 @@ defineEmits<{
       </thead>
       <tbody>
         <tr v-for="u in students" :key="u.id">
-          <td>{{ u.fullName }}</td>
+          <td>
+            {{ u.fullName }}
+            <span v-if="u.isActive === false" class="text-light">(đã khóa)</span>
+          </td>
           <td>{{ u.className }}</td>
           <td>{{ u.id }}</td>
           <td>{{ u.password }}</td>
@@ -43,6 +47,13 @@ defineEmits<{
                 @click="$emit('move', u)"
               >
                 ⏩
+              </button>
+              <button
+                class="btn btn-sm btn-secondary"
+                title="Khóa/mở tài khoản"
+                @click="$emit('toggle', u)"
+              >
+                {{ u.isActive === false ? '🔓' : '🔒' }}
               </button>
               <button
                 class="btn btn-sm btn-danger"

@@ -7,8 +7,8 @@ const id = ref(''),
   name = ref('')
 async function submit() {
   try {
-    if (props.register) registerAccount(id.value, password.value, name.value)
-    else login(id.value, password.value)
+    if (props.register) await registerAccount(id.value, password.value, name.value)
+    else await login(id.value, password.value)
     await navigateTo('/')
   } catch (e) {
     show((e as Error).message)
@@ -46,7 +46,11 @@ async function submit() {
           <label for="auth-name">📛 Họ và tên đầy đủ</label>
           <input id="auth-name" v-model="name" class="input-control" autocomplete="name" required />
         </div>
-        <button class="btn btn-accent mt-2 w-full" style="font-size: 1.1rem; padding: 12px">
+        <button
+          type="submit"
+          class="btn btn-accent mt-2 w-full"
+          style="font-size: 1.1rem; padding: 12px"
+        >
           {{ register ? 'Tạo tài khoản 🚀' : 'Đăng nhập hệ thống 🔓' }}
         </button>
       </form>

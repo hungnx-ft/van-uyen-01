@@ -1,0 +1,9 @@
+.git
+frontend
+.env
+.venv
+__pycache__
+**/__pycache__
+.pytest_cache
+.ruff_cache
+uploads

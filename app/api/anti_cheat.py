@@ -14,7 +14,7 @@ def log_anti_cheat_event(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_student)
 ):
-    submission = record_anti_cheat_event(db, submission_id=event.submission_id, event_type=event.event_type)
+    submission = record_anti_cheat_event(db, submission_id=event.submission_id, event_type=event.event_type, student_id=current_user.id)
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
     return {"message": "Event recorded", "leave_tab_count": submission.leave_tab_count}

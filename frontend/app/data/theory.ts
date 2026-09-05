@@ -1,4 +1,4 @@
-import type { TheoryArticle } from '~/types'
+import type { TheoryArticle } from '../types'
 export const initialTheory: Omit<TheoryArticle, 'id'>[] = [
   {
     mainCat: 'doc-hieu',

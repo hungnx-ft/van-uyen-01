@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { Exam, ExamType, Result } from '~/types'
 import { duration, totalScore, questionLabel, gradeTotal, clockText } from '~/utils/exams'
+import { isApiEnabled } from '~/utils/api'
 const props = defineProps<{
     session: { exam: Exam; type: ExamType; mode: 'take' | 'review' | 'grade'; result?: Result }
   }>(),
   emit = defineEmits<{ close: [] }>()
-const { data, upsert } = useDatabase(),
+const { data, upsert, createRemoteSubmission, gradeRemoteSubmission, sendRemoteAntiCheat } =
+    useDatabase(),
   { user, requireTeacher } = useAuth(),
   { show } = useToast()
 const exam = props.session.exam,
@@ -16,7 +18,7 @@ const answers = ref(exam.questions.map(() => '')),
     props.session.result ? JSON.parse(JSON.stringify(props.session.result)) : null,
   )
 const active = computed(() => mode.value === 'take')
-useAntiCheat(active)
+const { tabSwitches } = useAntiCheat(active)
 const timer = useExamTimer(duration(type, exam.targetGroup), () => {
   if (type === 'mock') {
     show('⚠️ Đã hết thời gian thi! Hệ thống tự động thu bài.')
@@ -49,7 +51,7 @@ function requestClose() {
   if (mode.value === 'take') confirm.value = 'close'
   else emit('close')
 }
-function submit() {
+async function submit() {
   if (mode.value !== 'take' || busy.value || !user.value) return
   busy.value = true
   try {
@@ -80,9 +82,23 @@ function submit() {
         ).length + 1,
       examSnapshot: JSON.parse(JSON.stringify(exam)),
     }
-    upsert('results', record)
+    const saved = isApiEnabled()
+      ? await createRemoteSubmission(
+          exam,
+          type,
+          answers.value,
+          record.attempt || 1,
+          record.submittedAt,
+        )
+      : record
+    if (isApiEnabled() && tabSwitches.value > 0) {
+      await Promise.all(
+        Array.from({ length: tabSwitches.value }, () => sendRemoteAntiCheat(saved.id)),
+      )
+    }
+    if (!isApiEnabled()) upsert('results', record)
     timer.stop()
-    result.value = record
+    result.value = saved
     if (type === 'practice') mode.value = 'self'
     else {
       mode.value = 'review'
@@ -96,7 +112,7 @@ function submit() {
     confirm.value = null
   }
 }
-function saveGrade() {
+async function saveGrade() {
   if (!result.value) return
   try {
     const record = JSON.parse(JSON.stringify(result.value)) as Result
@@ -107,7 +123,10 @@ function saveGrade() {
     } else {
       record.selfScore = gradeTotal(record, exam, 'selfScore')
     }
-    upsert('results', record)
+    const saved =
+      isApiEnabled() && mode.value === 'grade' ? await gradeRemoteSubmission(record, exam) : record
+    result.value = saved
+    if (!isApiEnabled() || mode.value !== 'grade') upsert('results', record)
     show(mode.value === 'grade' ? 'Đã chấm bài thành công! ✅' : 'Đã lưu điểm tự chấm! 🌸')
     emit('close')
   } catch (e) {
