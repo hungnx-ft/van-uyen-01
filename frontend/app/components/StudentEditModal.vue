@@ -43,7 +43,7 @@ async function submit() {
       <div class="input-group">
         <label v-if="mode === 'reset'">
           Mật khẩu mới
-          <input v-model="password" class="input-control" required />
+          <input v-model="password" type="password" class="input-control" required />
         </label>
         <label v-else>
           Lớp mới

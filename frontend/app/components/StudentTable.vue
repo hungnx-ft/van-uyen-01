@@ -28,8 +28,8 @@ defineEmits<{
             <span v-if="u.isActive === false" class="text-light">(đã khóa)</span>
           </td>
           <td>{{ u.className }}</td>
-          <td>{{ u.id }}</td>
-          <td>{{ u.password }}</td>
+          <td>{{ u.username || u.id }}</td>
+          <td>*****</td>
           <td>
             <div class="flex gap-2" style="flex-wrap: wrap">
               <button

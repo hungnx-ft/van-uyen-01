@@ -39,8 +39,17 @@ function optionalFields(row: Row, path: string) {
 }
 function exam(value: unknown, path: string): Row {
   const row = object(value, path)
-  if (!Array.isArray(row.questions) || !row.questions.length) fail(`${path}.questions`)
+  if (!Array.isArray(row.questions) || !row.questions.length || row.questions.length > 100)
+    fail(`${path}.questions`)
   optionalFields(row, path)
+  if (
+    row.durationMinutes !== undefined &&
+    (typeof row.durationMinutes !== 'number' ||
+      !Number.isInteger(row.durationMinutes) ||
+      row.durationMinutes < 1 ||
+      row.durationMinutes > 1440)
+  )
+    fail(`${path}.durationMinutes`)
   return {
     ...row,
     id: id(row.id, `${path}.id`),

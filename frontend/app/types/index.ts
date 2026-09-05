@@ -1,6 +1,8 @@
 export type ExamType = 'practice' | 'mock'
 export interface User {
   id: string
+  /** Login name; local mode historically uses id as the login name. */
+  username?: string
   password: string
   role: 'teacher' | 'student'
   fullName: string
@@ -39,6 +41,7 @@ export interface Exam {
   targetGroup: string
   genre?: string
   passage: string
+  durationMinutes?: number
   questions: Question[]
 }
 export interface Answer {

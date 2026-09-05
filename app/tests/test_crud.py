@@ -2,15 +2,16 @@ from app.models import Class, User
 from app.tests.conftest import bearer, login
 
 
-def _practice_exam(title="Bài luyện tập"):
+def _practice_exam(title="Bài luyện tập", duration_minutes=50, question_count=5):
     return {
         "title": title,
         "target_group": "Lớp 9",
         "passage": "Đoạn văn",
         "genre": "Nghị luận",
+        "duration_minutes": duration_minutes,
         "questions": [
             {"content": f"Câu {index}", "max_score": 0.8, "answer_key": "A"}
-            for index in range(1, 6)
+            for index in range(1, question_count + 1)
         ],
     }
 
@@ -50,6 +51,8 @@ def test_exam_crud_and_delete_protects_assigned_exam(client, db, accounts):
     created = client.post("/api/v1/exams/practice", headers=headers, json=_practice_exam())
     assert created.status_code == 200, created.text
     exam_id = created.json()["id"]
+    assert created.json()["duration_minutes"] == 50
+    assert len(created.json()["questions"]) == 5
     updated = client.put(
         f"/api/v1/exams/practice/{exam_id}",
         headers=headers,
@@ -57,6 +60,14 @@ def test_exam_crud_and_delete_protects_assigned_exam(client, db, accounts):
     )
     assert updated.status_code == 200
     assert updated.json()["title"] == "Bài luyện tập đã sửa"
+    assert updated.json()["duration_minutes"] == 50
+    dynamic = client.put(
+        f"/api/v1/exams/practice/{exam_id}",
+        headers=headers,
+        json=_practice_exam("Bài luyện tập 8 câu", question_count=8),
+    )
+    assert dynamic.status_code == 200, dynamic.text
+    assert len(dynamic.json()["questions"]) == 8
     assert client.delete(f"/api/v1/exams/practice/{exam_id}", headers=headers).status_code == 204
 
     assigned = client.post("/api/v1/exams/practice", headers=headers, json=_practice_exam("Bài đã giao"))

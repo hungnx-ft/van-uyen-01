@@ -131,6 +131,7 @@ export function useDatabase() {
       target_group: exam.targetGroup,
       passage: exam.passage,
       genre: exam.genre,
+      duration_minutes: exam.durationMinutes,
       questions: exam.questions.map((question, index) => ({
         content: question.q,
         max_score: question.score,
@@ -171,6 +172,7 @@ export function useDatabase() {
       target_group: exam.targetGroup,
       passage: exam.passage,
       genre: exam.genre,
+      duration_minutes: exam.durationMinutes,
       questions: exam.questions.map((question, index) => ({
         content: question.q,
         max_score: question.score,
@@ -363,6 +365,7 @@ interface ApiExam {
   target_group?: string | null
   genre?: string | null
   passage: string
+  duration_minutes?: number | null
   questions: ApiQuestion[]
 }
 interface ApiAssignment {
@@ -387,6 +390,7 @@ interface ApiStudent {
   class_id: number | null
   class_name: string | null
   is_active: boolean
+  temporary_password?: string
 }
 interface ApiStudentPage {
   items: ApiStudent[]
@@ -430,7 +434,8 @@ function mapTheory(article: ApiTheory) {
 function mapStudent(student: ApiStudent) {
   return {
     id: String(student.id),
-    password: '',
+    username: student.username,
+    password: student.temporary_password || '',
     role: 'student' as const,
     fullName: student.full_name,
     classId: student.class_id === null ? undefined : String(student.class_id),
@@ -448,6 +453,7 @@ function mapExam(exam: ApiExam) {
     targetGroup: exam.target_group || '',
     genre: exam.genre || undefined,
     passage: exam.passage || '',
+    durationMinutes: exam.duration_minutes || undefined,
     questions: exam.questions.map((question) => ({
       id: String(question.id),
       q: question.content,

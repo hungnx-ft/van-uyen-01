@@ -157,6 +157,7 @@ interface ApiUser {
 function mapApiUser(account: ApiUser): User {
   return {
     id: String(account.id),
+    username: account.username,
     password: '',
     role: account.role === 'Teacher' ? 'teacher' : 'student',
     fullName: account.full_name,

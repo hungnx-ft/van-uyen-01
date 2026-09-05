@@ -38,8 +38,8 @@ export function questionLabel(type: ExamType, i: number, score: number) {
         : `Phần II. Viết - Câu ${i - 4}`
   return `${prefix} (${score}đ)`
 }
-export function newQuestions(type: ExamType, group: string): Question[] {
-  const scores =
+export function newQuestions(type: ExamType, group: string, count?: number): Question[] {
+  const scorePattern =
     type === 'mock'
       ? [0.75, 0.75, 1, 1, 0.5, 2, 4]
       : group === 'viet-doan'
@@ -47,9 +47,17 @@ export function newQuestions(type: ExamType, group: string): Question[] {
         : group === 'viet-bai'
           ? [5]
           : [0.75, 0.75, 1, 1, 0.5]
-  return scores.map((score) => ({ q: scores.length === 1 ? 'Bài Viết' : '', a: '', score }))
+  const total = Number.isInteger(count) && count && count > 0 ? count : scorePattern.length
+  return Array.from({ length: total }, (_, index) => ({
+    q: scorePattern.length === 1 ? 'Bài Viết' : '',
+    a: '',
+    score: scorePattern[index % scorePattern.length]!,
+  }))
 }
-export function duration(type: ExamType, group: string) {
+export function duration(type: ExamType, group: string, customMinutes?: number) {
+  if (customMinutes && Number.isFinite(customMinutes) && customMinutes > 0) {
+    return Math.round(customMinutes * 60)
+  }
   return (
     (type === 'mock'
       ? 120

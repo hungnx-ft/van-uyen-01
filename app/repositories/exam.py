@@ -7,7 +7,7 @@ class CRUDPracticeExam(CRUDBase[PracticeExam, PracticeExamBase, PracticeExamBase
     def create_with_teacher(self, db: Session, *, obj_in: PracticeExamCreate, teacher_id: int) -> PracticeExam:
         db_obj = PracticeExam(title=obj_in.title, teacher_id=teacher_id,
                               target_group=obj_in.target_group, passage=obj_in.passage,
-                              genre=obj_in.genre)
+                              genre=obj_in.genre, duration_minutes=obj_in.duration_minutes)
         db.add(db_obj)
         db.flush()
         db.refresh(db_obj)
@@ -28,7 +28,7 @@ class CRUDMockExam(CRUDBase[MockExam, MockExamBase, MockExamBase]):
     def create_with_teacher(self, db: Session, *, obj_in: MockExamCreate, teacher_id: int) -> MockExam:
         db_obj = MockExam(title=obj_in.title, teacher_id=teacher_id,
                           target_group=obj_in.target_group, passage=obj_in.passage,
-                          genre=obj_in.genre)
+                          genre=obj_in.genre, duration_minutes=obj_in.duration_minutes)
         db.add(db_obj)
         db.flush()
         db.refresh(db_obj)

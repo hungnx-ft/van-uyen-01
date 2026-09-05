@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Exam, ExamType } from '~/types'
-import { newQuestions, questionLabel, practiceGroups, mockGroups } from '~/utils/exams'
+import { duration, newQuestions, questionLabel, practiceGroups, mockGroups } from '~/utils/exams'
 const props = defineProps<{ type: ExamType; exam?: Exam; group: string }>(),
   emit = defineEmits<{ save: [exam: Exam]; close: [] }>()
 const form = reactive<Exam>(
@@ -12,9 +12,13 @@ const form = reactive<Exam>(
         targetGroup: props.group,
         genre: 'tho',
         passage: '',
+        durationMinutes: duration(props.type, props.group) / 60,
         questions: newQuestions(props.type, props.group),
       },
 )
+if (props.exam && !form.durationMinutes)
+  form.durationMinutes = duration(props.type, props.exam.targetGroup) / 60
+const questionCount = ref(form.questions.length)
 const requested = ref('')
 function changeGroup(event: Event) {
   const value = (event.target as HTMLSelectElement).value
@@ -27,7 +31,28 @@ function changeGroup(event: Event) {
 function applyGroup(value: string) {
   form.targetGroup = value
   if (props.type === 'practice') form.questions = newQuestions(props.type, value)
+  questionCount.value = form.questions.length
   requested.value = ''
+}
+function resizeQuestions(value: unknown) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) {
+    questionCount.value = form.questions.length
+    return
+  }
+  const count = Math.max(1, Math.min(100, Math.floor(parsed)))
+  const defaults = newQuestions(props.type, form.targetGroup, count)
+  form.questions = Array.from({ length: count }, (_, index) => {
+    const current = form.questions[index]
+    const fallback = defaults[index]!
+    return {
+      id: current?.id,
+      q: current?.q ?? fallback.q,
+      a: current?.a ?? fallback.a,
+      score: current?.score ?? fallback.score,
+    }
+  })
+  questionCount.value = count
 }
 </script>
 <template>
@@ -74,6 +99,39 @@ function applyGroup(value: string) {
           {{ form.questions.length === 1 ? 'Đề bài (Yêu cầu viết)' : 'Ngữ liệu đọc hiểu' }}
           <textarea v-model="form.passage" class="input-control" required />
         </label>
+      </div>
+      <div class="input-group">
+        <label>
+          Thời lượng làm bài (phút)
+          <input
+            v-model.number="form.durationMinutes"
+            type="number"
+            class="input-control"
+            min="1"
+            max="1440"
+            step="1"
+            required
+          />
+        </label>
+        <small class="text-light">Từ 1 đến 1440 phút.</small>
+      </div>
+      <div class="input-group">
+        <label>
+          Số lượng câu hỏi
+          <input
+            v-model.number="questionCount"
+            type="number"
+            class="input-control"
+            min="1"
+            max="100"
+            step="1"
+            required
+            @change="resizeQuestions(questionCount)"
+          />
+        </label>
+        <small class="text-light">
+          Từ 1 đến 100 câu. Thay đổi số lượng sẽ giữ lại nội dung câu hiện có.
+        </small>
       </div>
       <h4 class="font-heading mb-3 text-primary">Phần Câu hỏi & Hướng dẫn chấm</h4>
       <div

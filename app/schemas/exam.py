@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 from datetime import datetime
 
@@ -20,9 +20,10 @@ class PracticeExamBase(BaseModel):
     target_group: Optional[str] = None
     passage: str = ""
     genre: Optional[str] = None
+    duration_minutes: int = Field(default=45, ge=1, le=1440)
 
 class PracticeExamCreate(PracticeExamBase):
-    questions: List[PracticeQuestionCreate]
+    questions: List[PracticeQuestionCreate] = Field(min_length=1, max_length=100)
 
 class PracticeExamResponse(PracticeExamBase):
     id: int
@@ -50,9 +51,10 @@ class MockExamBase(BaseModel):
     target_group: Optional[str] = None
     passage: str = ""
     genre: Optional[str] = None
+    duration_minutes: int = Field(default=120, ge=1, le=1440)
 
 class MockExamCreate(MockExamBase):
-    questions: List[MockQuestionCreate]
+    questions: List[MockQuestionCreate] = Field(min_length=1, max_length=100)
 
 class MockExamResponse(MockExamBase):
     id: int

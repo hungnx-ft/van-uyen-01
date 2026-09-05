@@ -19,7 +19,7 @@ const answers = ref(exam.questions.map(() => '')),
   )
 const active = computed(() => mode.value === 'take')
 const { tabSwitches } = useAntiCheat(active)
-const timer = useExamTimer(duration(type, exam.targetGroup), () => {
+const timer = useExamTimer(duration(type, exam.targetGroup, exam.durationMinutes), () => {
   if (type === 'mock') {
     show('⚠️ Đã hết thời gian thi! Hệ thống tự động thu bài.')
     submit()

@@ -44,6 +44,14 @@ describe('exam rules retained from the HTML app', () => {
     expect(clockText(7200)).toBe('120:00')
     expect(clockText(-61)).toBe('-01:01')
   })
+  it('uses a configured exam duration when provided', () => {
+    expect(duration('mock', 'vao-10', 45)).toBe(2700)
+    expect(duration('practice', 'doc-hieu', 0)).toBe(1500)
+  })
+  it('generates a configurable number of questions', () => {
+    expect(newQuestions('practice', 'doc-hieu', 8)).toHaveLength(8)
+    expect(newQuestions('mock', 'vao-10', 3)).toHaveLength(3)
+  })
 })
 
 describe('legacy browser storage', () => {

@@ -4,9 +4,9 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   runtimeConfig: {
     public: {
-      // Nuxt maps NUXT_PUBLIC_API_BASE into public runtime config at startup.
+      // This value is embedded into the SPA bundle during `nuxt build`.
       // An empty default keeps the offline LocalStorage mode available.
-      apiBase: '',
+      apiBase: import.meta.env.NUXT_PUBLIC_API_BASE || '',
     },
   },
   css: ['~/assets/css/main.css'],
