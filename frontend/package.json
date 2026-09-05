@@ -1,0 +1,31 @@
+{
+  "name": "van-uyen-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "format": "prettier --write app tests *.ts *.json README.md",
+    "format:check": "prettier --check app tests *.ts *.json README.md",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "dompurify": "^3.2.0",
+    "nuxt": "^4.0.0",
+    "vue": "^3.5.0",
+    "vue-router": "^5.3.1",
+    "xlsx": "0.18.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "vue-tsc": "^3.0.0"
+  }
+}

@@ -1,0 +1,1 @@
+<template><AuthForm register /></template>

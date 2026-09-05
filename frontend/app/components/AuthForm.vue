@@ -1,0 +1,58 @@
+<script setup lang="ts">
+const props = defineProps<{ register?: boolean }>()
+const { login, register: registerAccount } = useAuth(),
+  { show } = useToast()
+const id = ref(''),
+  password = ref(''),
+  name = ref('')
+async function submit() {
+  try {
+    if (props.register) registerAccount(id.value, password.value, name.value)
+    else login(id.value, password.value)
+    await navigateTo('/')
+  } catch (e) {
+    show((e as Error).message)
+  }
+}
+</script>
+<template>
+  <div class="workspace-overlay active" style="background: var(--bg-color); overflow: auto">
+    <div class="onboarding-container">
+      <div class="floral-decoration floral-tl">🌸</div>
+      <div class="floral-decoration floral-br">🌿</div>
+      <h1 class="font-heading text-primary mb-1" style="font-size: 2.2rem">🌸 VĂN UYỂN</h1>
+      <p class="text-light mb-4" style="font-style: italic">Nơi chữ nghĩa nở hoa</p>
+      <form @submit.prevent="submit">
+        <h2 v-if="register" class="font-heading mb-2 text-primary">🌱 Đăng ký Tài khoản Tự do</h2>
+        <p v-if="register" class="mb-3 text-light">
+          Dành cho học sinh tự học không có tài khoản của trường
+        </p>
+        <div class="input-group">
+          <label for="auth-id">👤 Tên đăng nhập</label>
+          <input id="auth-id" v-model="id" class="input-control" autocomplete="username" required />
+        </div>
+        <div class="input-group">
+          <label for="auth-password">🔒 Mật khẩu</label>
+          <input
+            id="auth-password"
+            v-model="password"
+            type="password"
+            class="input-control"
+            :autocomplete="register ? 'new-password' : 'current-password'"
+            required
+          />
+        </div>
+        <div v-if="register" class="input-group">
+          <label for="auth-name">📛 Họ và tên đầy đủ</label>
+          <input id="auth-name" v-model="name" class="input-control" autocomplete="name" required />
+        </div>
+        <button class="btn btn-accent mt-2 w-full" style="font-size: 1.1rem; padding: 12px">
+          {{ register ? 'Tạo tài khoản 🚀' : 'Đăng nhập hệ thống 🔓' }}
+        </button>
+      </form>
+      <NuxtLink class="toggle-login" :to="register ? '/login' : '/register'">
+        {{ register ? '🔑 Đã có tài khoản? Đăng nhập ngay' : '🌱 Đăng ký tài khoản tự do' }}
+      </NuxtLink>
+    </div>
+  </div>
+</template>
