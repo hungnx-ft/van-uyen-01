@@ -11,7 +11,10 @@ const filter = ref('all'),
   viewing = ref<User | null>(null)
 const students = computed(() =>
   data.value.users.filter(
-    (u) => u.role === 'student' && (filter.value === 'all' || u.classId === filter.value),
+    (u) =>
+      u.role === 'student' &&
+      (filter.value === 'all' ||
+        (filter.value === 'free_class' ? !u.classId : u.classId === filter.value)),
   ),
 )
 const results = computed(() =>

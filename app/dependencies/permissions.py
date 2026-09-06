@@ -1,4 +1,5 @@
 from fastapi import HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.class_ import Class
@@ -19,8 +20,12 @@ def owned_class(db: Session, class_id: int, teacher_id: int, *, lock: bool = Fal
 
 
 def managed_student(db: Session, student_id: int, teacher_id: int) -> User:
-    student = db.query(User).join(Class, User.class_id == Class.id).filter(
-        User.id == student_id, User.role == "Student", Class.teacher_id == teacher_id
+    # Unassigned/self-registered students are visible to teachers until they
+    # are moved into a class. Once assigned, normal teacher ownership applies.
+    student = db.query(User).outerjoin(Class, User.class_id == Class.id).filter(
+        User.id == student_id,
+        User.role == "Student",
+        or_(Class.teacher_id == teacher_id, User.class_id.is_(None)),
     ).first()
     if student is None:
         raise HTTPException(404, "Student not found")
