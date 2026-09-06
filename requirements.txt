@@ -2,6 +2,7 @@ python-dotenv==1.0.1
 fastapi[all]==0.111.0
 uvicorn==0.29.0
 SQLAlchemy==2.0.30
+greenlet==3.2.5
 alembic==1.13.1
 psycopg2-binary==2.9.9
 pydantic==2.7.1
