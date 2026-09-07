@@ -3,7 +3,7 @@ import type { Exam, ExamType } from '~/types'
 import { practiceGroups, mockGroups } from '~/utils/exams'
 import { isApiEnabled } from '~/utils/api'
 const props = defineProps<{ type: ExamType }>()
-const { data, upsert, remove, set, createRemoteExam, updateRemoteExam, deleteRemoteExam } =
+const { data, upsert, remove, set, createRemoteExam, updateRemoteExam, deleteRemoteExam, uploadRemoteRubric } =
     useDatabase(),
   { user, isTeacher, requireTeacher } = useAuth(),
   { show } = useToast(),
@@ -16,12 +16,14 @@ const group = ref(props.type === 'practice' ? 'doc-hieu' : 'vao-10'),
   rubricExam = ref<Exam | null>(null)
 const table = computed(() => (props.type === 'practice' ? 'practice_exams' : 'mock_exams'))
 const exams = computed(() => data.value[table.value].filter((e) => e.targetGroup === group.value))
-async function save(exam: Exam) {
+async function save(exam: Exam, rubricFile?: File) {
   try {
     requireTeacher()
     if (isApiEnabled()) {
-      if (edit.value) await updateRemoteExam(exam, props.type)
-      else await createRemoteExam(exam, props.type)
+      const saved = edit.value
+        ? await updateRemoteExam(exam, props.type)
+        : await createRemoteExam(exam, props.type)
+      if (rubricFile) await uploadRemoteRubric(saved.id, props.type, rubricFile)
     } else upsert(table.value, exam)
     group.value = exam.targetGroup
     editing.value = false

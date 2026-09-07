@@ -78,50 +78,53 @@ onMounted(load)
 </script>
 
 <template>
-  <BaseModal :title="`Barem: ${exam.title}`" wide @close="emit('close')">
-    <div v-if="!isApiEnabled()" class="empty-state">
-      Barem cần backend API và chưa hỗ trợ ở chế độ local.
-    </div>
-    <template v-else>
-      <p v-if="loading" class="text-light">Đang tải barem...</p>
+  <BaseModal :title="`Barem: ${exam.title}`" @close="emit('close')">
+    <div class="modal-content rubric-modal-content">
+      <div v-if="!isApiEnabled()" class="empty-state">
+        Barem cần backend API và chưa hỗ trợ ở chế độ local.
+      </div>
       <template v-else>
-        <div class="flex justify-between items-center mb-3" style="flex-wrap: wrap; gap: 10px">
-          <span class="text-light">
-            {{
-              rubric
-                ? `Phiên bản ${rubric.version}${rubric.original_filename ? ` · ${rubric.original_filename}` : ''}`
-                : 'Chưa có barem'
-            }}
-          </span>
-          <div class="flex gap-2">
-            <button class="btn btn-secondary btn-sm" :disabled="saving" @click="fileInput?.click()">
-              Upload file
-            </button>
-            <button v-if="rubric" class="btn btn-danger btn-sm" :disabled="saving" @click="remove">
-              Xóa
-            </button>
+        <p v-if="loading" class="text-light">Đang tải barem...</p>
+        <template v-else>
+          <div class="rubric-toolbar">
+            <span class="text-light rubric-version">
+              {{ rubric ? `Phiên bản ${rubric.version}${rubric.original_filename ? ` · ${rubric.original_filename}` : ''}` : 'Chưa có barem' }}
+            </span>
+            <div class="flex gap-2">
+              <button class="btn btn-secondary btn-sm" :disabled="saving" @click="fileInput?.click()">Upload file</button>
+              <button v-if="rubric" class="btn btn-danger btn-sm" :disabled="saving" @click="remove">Xóa</button>
+            </div>
+            <input ref="fileInput" type="file" accept=".pdf,.docx,.txt,.md,.markdown" hidden @change="upload" />
           </div>
-          <input
-            ref="fileInput"
-            type="file"
-            accept=".pdf,.docx,.txt,.md,.markdown"
-            hidden
-            @change="upload"
-          />
-        </div>
-        <textarea
-          v-model="content"
-          class="input-control"
-          rows="18"
-          placeholder="Dán hoặc chỉnh sửa barem tại đây..."
-        />
-        <button v-if="rubric" class="btn btn-primary mt-3" :disabled="saving" @click="save">
-          Lưu phiên bản mới
-        </button>
-        <p v-else class="text-light mt-3">
-          Upload PDF, DOCX, TXT hoặc Markdown để tạo barem cho đề.
-        </p>
+          <textarea v-model="content" class="input-control rubric-textarea" rows="12" placeholder="Dán hoặc chỉnh sửa barem tại đây..." />
+          <div v-if="rubric" class="rubric-actions">
+            <button class="btn btn-primary btn-sm" :disabled="saving" @click="save">Lưu phiên bản mới</button>
+          </div>
+          <p v-else class="text-light mt-3">Upload PDF, DOCX, TXT hoặc Markdown để tạo barem cho đề.</p>
+        </template>
       </template>
-    </template>
+    </div>
   </BaseModal>
 </template>
+
+<style scoped>
+.rubric-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+.rubric-actions .btn {
+  width: auto;
+  flex: 0 0 auto;
+}
+.rubric-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.rubric-version { min-width: 0; overflow-wrap: anywhere; }
+.rubric-textarea { width: 100%; box-sizing: border-box; }
+</style>

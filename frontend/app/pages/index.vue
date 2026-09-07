@@ -1,6 +1,10 @@
 <script setup lang="ts">
 const { data } = useDatabase(),
   { user } = useAuth()
+if (user.value?.role === 'teacher') navigateTo('/analytics', { replace: true })
+watch(() => user.value?.role, (role) => {
+  if (role === 'teacher') navigateTo('/analytics', { replace: true })
+})
 const results = computed(() => data.value.results.filter((r) => r.studentId === user.value?.id))
 </script>
 <template>

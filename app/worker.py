@@ -24,7 +24,13 @@ MAX_ATTEMPTS = 3
 async def process_one() -> bool:
     db = SessionLocal()
     try:
-        job = db.query(AIGradingJob).filter(AIGradingJob.status == "pending").order_by(AIGradingJob.id).first()
+        # Multiple worker replicas may poll concurrently.  Lock only the job
+        # being claimed and skip rows another worker is already processing.
+        job = (db.query(AIGradingJob)
+               .filter(AIGradingJob.status == "pending")
+               .order_by(AIGradingJob.id)
+               .with_for_update(skip_locked=True)
+               .first())
         if not job:
             return False
         job.status = "processing"

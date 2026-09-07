@@ -58,6 +58,14 @@ const confirm = ref<'close' | 'submit' | null>(null),
     } | null
   } | null>(null)
 const aiHistory = ref<Array<NonNullable<typeof aiJob.value>>>([])
+const aiPoller = ref<ReturnType<typeof setInterval> | null>(null)
+const aiProgress = computed(() => {
+  if (!aiJob.value) return 0
+  if (aiJob.value.status === 'completed') return 100
+  if (aiJob.value.status === 'failed') return 100
+  if (aiJob.value.status === 'processing') return 65
+  return 25
+})
 const isEssay = computed(() => type === 'practice' && exam.questions.length === 1)
 const title = computed(() =>
   mode.value === 'take'
@@ -82,10 +90,26 @@ onMounted(() => {
       .then((items) => {
         aiHistory.value = items
         aiJob.value = items[0] || null
+        if (aiJob.value && ['pending', 'processing'].includes(aiJob.value.status)) startAIPolling()
       })
       .catch(() => undefined)
   }
 })
+onUnmounted(() => stopAIPolling())
+function stopAIPolling() {
+  if (aiPoller.value) clearInterval(aiPoller.value)
+  aiPoller.value = null
+}
+function startAIPolling() {
+  stopAIPolling()
+  aiPoller.value = setInterval(async () => {
+    if (!aiJob.value || !['pending', 'processing'].includes(aiJob.value.status)) {
+      stopAIPolling()
+      return
+    }
+    await refreshAI(true)
+  }, 2500)
+}
 function requestClose() {
   if (mode.value === 'take') confirm.value = 'close'
   else emit('close')
@@ -186,14 +210,15 @@ async function requestAI() {
   try {
     aiJob.value = await createRemoteAIJob(result.value.id)
     aiHistory.value = [aiJob.value, ...aiHistory.value]
-    show('Đã tạo yêu cầu AI chấm. Có thể tải lại trạng thái sau khi worker xử lý.')
+    startAIPolling()
+    show('Đã gửi bài cho AI chấm. Kết quả sẽ tự cập nhật.')
   } catch (error) {
     show((error as Error).message)
   } finally {
     aiBusy.value = false
   }
 }
-async function refreshAI() {
+async function refreshAI(silent = false) {
   if (!aiJob.value) return
   aiBusy.value = true
   try {
@@ -202,10 +227,13 @@ async function refreshAI() {
       item.id === aiJob.value?.id ? aiJob.value : item,
     )
   } catch (error) {
-    show((error as Error).message)
+    if (!silent) show((error as Error).message)
   } finally {
     aiBusy.value = false
   }
+}
+function refreshAIFromButton() {
+  refreshAI(false)
 }
 async function applyAI() {
   if (!aiJob.value) return
@@ -351,7 +379,7 @@ function label(i: number) {
                   v-if="aiJob"
                   class="btn btn-sm btn-outline"
                   :disabled="aiBusy"
-                  @click="refreshAI"
+                  @click="refreshAIFromButton"
                 >
                   Tải lại AI
                 </button>
@@ -365,6 +393,14 @@ function label(i: number) {
                 </button>
               </div>
               <p v-if="aiJob" class="text-light mt-2">
+                <span v-if="['pending', 'processing'].includes(aiJob.status)" class="ai-spinner" aria-label="AI đang chấm" />
+                <strong v-if="aiJob.status === 'pending'"> AI đang xếp hàng...</strong>
+                <strong v-else-if="aiJob.status === 'processing'"> AI đang phân tích bài...</strong>
+                <strong v-else-if="aiJob.status === 'completed'"> ✅ AI đã chấm xong</strong>
+                <strong v-else-if="aiJob.status === 'failed'"> ⚠️ AI chấm lỗi</strong>
+                <div v-if="['pending', 'processing'].includes(aiJob.status)" class="ai-progress mt-2">
+                  <div class="ai-progress-bar" :style="{ width: `${aiProgress}%` }" />
+                </div>
                 AI: {{ aiJob.status }}
                 <span v-if="aiJob.result?.confidence != null">
                   · độ tin cậy {{ Math.round(aiJob.result.confidence * 100) }}%
@@ -385,8 +421,7 @@ function label(i: number) {
                   style="border-top: 1px dashed var(--border-color); padding-top: 8px"
                 >
                   <button class="btn btn-sm btn-outline" @click="aiJob = item">
-                    Lần #{{ item.id }} · {{ item.status }} · {{ item.provider }} /
-                    {{ item.model }} · barem v{{ item.rubric_version }}
+                    Lần #{{ item.id }} · {{ item.status }} · barem v{{ item.rubric_version }}
                   </button>
                   <span v-if="item.result?.total_score != null" class="text-light ml-2">
                     {{ item.result.total_score }}đ
@@ -410,3 +445,29 @@ function label(i: number) {
     @confirm="confirmed"
   />
 </template>
+
+<style scoped>
+.ai-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #c7d2fe;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  vertical-align: -2px;
+  animation: ai-spin 0.8s linear infinite;
+}
+.ai-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dbeafe;
+}
+.ai-progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6366f1, #06b6d4);
+  transition: width 0.5s ease;
+}
+@keyframes ai-spin { to { transform: rotate(360deg); } }
+</style>

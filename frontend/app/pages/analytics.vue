@@ -56,7 +56,7 @@ onMounted(async () => {
 </script>
 <template>
   <section v-if="isTeacher" class="panel">
-    <h2 class="section-title mb-3">📈 Góc Phân Tích</h2>
+    <h2 class="section-title mb-3">🏡 Trang chủ</h2>
     <div class="flex gap-2 mb-3" style="flex-wrap: wrap">
       <select v-model="period" class="input-control" aria-label="Khoảng thời gian">
         <option value="all">Toàn bộ thời gian</option>

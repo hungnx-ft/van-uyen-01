@@ -6,6 +6,7 @@ const { data, remove, set, deleteRemoteStudent, setRemoteStudentStatus } = useDa
   { show } = useToast(),
   { openResult } = useWorkspace()
 const filter = ref('all'),
+  search = ref(''),
   activeMenu = ref('students'),
   editing = ref<{ student: User; mode: 'reset' | 'move' } | null>(null),
   deleting = ref<User | null>(null),
@@ -15,13 +16,32 @@ const students = computed(() =>
     (u) =>
       u.role === 'student' &&
       (filter.value === 'all' ||
-        (filter.value === 'free_class' ? !u.classId : u.classId === filter.value)),
+        (filter.value === 'free_class' ? !u.classId : u.classId === filter.value)) &&
+      (() => {
+        const q = search.value.trim().toLowerCase()
+        if (!q) return true
+        const code = u.studentCode || `hs-${String(u.id).replace(/\D/g, '').padStart(5, '0')}`
+        return [code, u.fullName, u.username, u.id].some((value) =>
+          String(value || '').toLowerCase().includes(q),
+        )
+      })(),
   ),
 )
 const results = computed(() =>
   data.value.results
     .filter((r) => r.studentId === viewing.value?.id)
     .sort((a, b) => b.submittedAt - a.submittedAt),
+)
+const studentStats = computed(() => {
+  const items = results.value
+  const graded = items.filter((r) => r.status === 'graded')
+  const average = graded.length
+    ? graded.reduce((sum, r) => sum + (r.teacherScore ?? r.selfScore ?? 0), 0) / graded.length
+    : 0
+  return { total: items.length, graded: graded.length, pending: items.length - graded.length, average }
+})
+const viewingClassYear = computed(() =>
+  data.value.classes.find((c) => c.id === viewing.value?.classId)?.year || '—',
 )
 async function destroy() {
   try {
@@ -81,13 +101,16 @@ const managementMenus = [
     <div v-if="activeMenu === 'students'" class="card mt-3">
       <div class="flex justify-between items-center mb-3" style="flex-wrap: wrap; gap: 12px">
         <h3 class="font-heading text-primary">Danh Sách Học Sinh</h3>
-        <select v-model="filter" class="input-control" style="width: 200px" aria-label="Lọc lớp">
+        <div class="flex gap-2" style="flex-wrap: wrap">
+          <input v-model="search" class="input-control" style="width: 240px" placeholder="Tìm theo mã HS, tên hoặc tài khoản" aria-label="Tìm học sinh" />
+          <select v-model="filter" class="input-control" style="width: 200px" aria-label="Lọc lớp">
           <option value="all">-- Tất cả Học sinh --</option>
           <option value="free_class">Lớp Tự do</option>
           <option v-for="c in data.classes" :key="c.id" :value="c.id">
             {{ c.name }} ({{ c.year }})
           </option>
-        </select>
+          </select>
+        </div>
       </div>
       <StudentTable
         :students="students"
@@ -95,7 +118,7 @@ const managementMenus = [
         @move="editing = { student: $event, mode: 'move' }"
         @remove="deleting = $event"
         @toggle="toggleStatus"
-        @grade="viewing = $event"
+        @detail="viewing = $event"
       />
     </div>
 
@@ -129,8 +152,26 @@ const managementMenus = [
       @close="deleting = null"
       @confirm="destroy"
     />
-    <BaseModal v-if="viewing" :title="`Bài làm: ${viewing.fullName}`" @close="viewing = null">
+    <BaseModal v-if="viewing" :title="`Hồ sơ học sinh: ${viewing.fullName}`" wide @close="viewing = null">
       <div class="modal-content">
+        <div class="student-profile-head">
+          <div>
+            <h3 class="font-heading text-primary">{{ viewing.fullName }}</h3>
+            <p class="text-light mb-0">Tài khoản: {{ viewing.username || viewing.id }}</p>
+          </div>
+          <span class="status-pill" :class="viewing.isActive === false ? 'status-locked' : 'status-active'">
+            {{ viewing.isActive === false ? 'Đã khóa' : 'Đang hoạt động' }}
+          </span>
+        </div>
+        <div class="student-info-grid mt-3">
+          <div><small>Lớp</small><strong>{{ viewing.className || 'Tự do' }}</strong></div>
+          <div><small>Niên khóa</small><strong>{{ viewingClassYear }}</strong></div>
+          <div><small>Trường</small><strong>{{ viewing.schoolName || '—' }}</strong></div>
+          <div><small>Bài đã nộp</small><strong>{{ studentStats.total }}</strong></div>
+          <div><small>Đã chấm</small><strong>{{ studentStats.graded }}</strong></div>
+          <div><small>Điểm trung bình</small><strong>{{ studentStats.graded ? studentStats.average.toFixed(2) : '—' }}</strong></div>
+        </div>
+        <h4 class="font-heading text-primary mt-4 mb-2">Quá trình học tập</h4>
         <ResultHistory
           :results="results"
           teacher
@@ -141,3 +182,15 @@ const managementMenus = [
     </BaseModal>
   </section>
 </template>
+
+<style scoped>
+.student-profile-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.student-info-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.student-info-grid > div { padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #fffafe; }
+.student-info-grid small, .student-info-grid strong { display: block; }
+.student-info-grid small { color: var(--text-light); margin-bottom: 4px; }
+.status-pill { padding: 6px 12px; border-radius: 999px; font-size: .85rem; font-weight: 600; }
+.status-active { background: #dcfce7; color: #166534; }
+.status-locked { background: #fee2e2; color: #991b1b; }
+@media (max-width: 700px) { .student-info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>

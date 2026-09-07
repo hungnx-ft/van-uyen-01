@@ -37,6 +37,20 @@ services:
       start_period: 15s
     command: sh -c "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
+  ai-worker:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-van_uyen_db}
+      - SECRET_KEY=${SECRET_KEY:-development-only-change-this-secret-key-before-deploying}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: always
+    command: python -m app.worker
+
   frontend:
     build:
       context: ./frontend

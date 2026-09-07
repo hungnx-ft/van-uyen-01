@@ -6,14 +6,18 @@ defineEmits<{
   move: [user: User]
   toggle: [user: User]
   remove: [user: User]
-  grade: [user: User]
+  detail: [user: User]
 }>()
+function studentCode(user: User) {
+  return user.studentCode || `HS-${String(user.id).replace(/\D/g, '').padStart(5, '0')}`
+}
 </script>
 <template>
   <div style="overflow-x: auto">
     <table class="leaderboard-table" style="font-size: 0.9rem">
       <thead>
         <tr>
+          <th>Mã HS</th>
           <th>Họ Tên</th>
           <th>Lớp</th>
           <th>Tài Khoản</th>
@@ -23,6 +27,7 @@ defineEmits<{
       </thead>
       <tbody>
         <tr v-for="u in students" :key="u.id">
+          <td>{{ studentCode(u) }}</td>
           <td>
             {{ u.fullName }}
             <span v-if="u.isActive === false" class="text-light">(đã khóa)</span>
@@ -39,7 +44,7 @@ defineEmits<{
               >
                 🔄
               </button>
-              <button class="btn btn-sm btn-primary" @click="$emit('grade', u)">📝 Chấm</button>
+              <button class="btn btn-sm btn-primary" @click="$emit('detail', u)">👁️ Chi tiết</button>
               <button
                 class="btn btn-sm btn-secondary"
                 :title="u.isClassStudent ? 'Chuyển lớp' : 'Thêm vào lớp'"
@@ -65,7 +70,7 @@ defineEmits<{
           </td>
         </tr>
         <tr v-if="!students.length">
-          <td colspan="5" class="empty-state">Chưa có học sinh.</td>
+          <td colspan="6" class="empty-state">Chưa có học sinh.</td>
         </tr>
       </tbody>
     </table>

@@ -572,10 +572,13 @@ textarea.input-control {
 }
 .leaderboard-table tr {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-  transition: transform 0.2s;
+  transition: background-color 0.2s;
 }
 .leaderboard-table tr:hover {
-  transform: scale(1.01);
+  transform: none;
+}
+.leaderboard-table tr:hover td {
+  background-color: #fffafd;
 }
 
 /* WORKSPACE (BÀI LÀM / ĐỌC HIỂU) */

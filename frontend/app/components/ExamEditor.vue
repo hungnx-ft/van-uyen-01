@@ -2,7 +2,7 @@
 import type { Exam, ExamType } from '~/types'
 import { duration, newQuestions, questionLabel, practiceGroups, mockGroups } from '~/utils/exams'
 const props = defineProps<{ type: ExamType; exam?: Exam; group: string }>(),
-  emit = defineEmits<{ save: [exam: Exam]; close: [] }>()
+  emit = defineEmits<{ save: [exam: Exam, rubricFile?: File]; close: [] }>()
 const form = reactive<Exam>(
   props.exam
     ? JSON.parse(JSON.stringify(props.exam))
@@ -20,6 +20,10 @@ if (props.exam && !form.durationMinutes)
   form.durationMinutes = duration(props.type, props.exam.targetGroup) / 60
 const questionCount = ref(form.questions.length)
 const requested = ref('')
+const rubricFile = ref<File | undefined>()
+function chooseRubric(event: Event) {
+  rubricFile.value = (event.target as HTMLInputElement).files?.[0]
+}
 function changeGroup(event: Event) {
   const value = (event.target as HTMLSelectElement).value
   if (value === form.targetGroup) return
@@ -60,7 +64,7 @@ function resizeQuestions(value: unknown) {
     :title="`${exam ? '🌻 Sửa' : '🌻 Thêm'} Đề ${type === 'practice' ? 'Luyện Tập' : 'Thi Thử'}`"
     @close="emit('close')"
   >
-    <form class="modal-content" @submit.prevent="emit('save', JSON.parse(JSON.stringify(form)))">
+    <form class="modal-content" @submit.prevent="emit('save', JSON.parse(JSON.stringify(form)), rubricFile)">
       <div class="input-group">
         <label>
           Tên đề
@@ -155,6 +159,13 @@ function resizeQuestions(value: unknown) {
             />
           </label>
         </div>
+      </div>
+      <div class="input-group">
+        <label>
+          Barem chấm (tuỳ chọn)
+          <input type="file" accept=".pdf,.docx,.txt,.md,.markdown" @change="chooseRubric" />
+        </label>
+        <small class="text-light">Có thể upload ngay khi tạo đề; hệ thống sẽ lưu barem sau khi tạo đề.</small>
       </div>
       <button class="btn btn-primary">Lưu Đề</button>
     </form>
