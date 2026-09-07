@@ -956,6 +956,8 @@ textarea.input-control {
   }
   .main-content {
     margin-left: 0;
+    min-width: 0;
+    width: 100%;
   }
   .mobile-header {
     display: flex;
@@ -974,6 +976,13 @@ textarea.input-control {
   }
   .panel {
     padding: 20px;
+    min-width: 0;
+  }
+  .grid,
+  .grid.cols-4,
+  .grid.cols-3 {
+    grid-template-columns: 1fr;
+    min-width: 0;
   }
   .grading-grid.cols-4,
   .grading-grid.cols-3 {
