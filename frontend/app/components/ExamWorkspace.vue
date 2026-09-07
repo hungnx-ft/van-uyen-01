@@ -6,8 +6,18 @@ const props = defineProps<{
     session: { exam: Exam; type: ExamType; mode: 'take' | 'review' | 'grade'; result?: Result }
   }>(),
   emit = defineEmits<{ close: [] }>()
-const { data, upsert, createRemoteSubmission, gradeRemoteSubmission, sendRemoteAntiCheat } =
-    useDatabase(),
+const {
+    data,
+    upsert,
+    createRemoteSubmission,
+    gradeRemoteSubmission,
+    sendRemoteAntiCheat,
+    createRemoteAIJob,
+    getRemoteAIJob,
+    getRemoteAIHistory,
+    applyRemoteAIJob,
+    saveRemoteFeedback,
+  } = useDatabase(),
   { user, requireTeacher } = useAuth(),
   { show } = useToast()
 const exam = props.session.exam,
@@ -26,7 +36,28 @@ const timer = useExamTimer(duration(type, exam.targetGroup, exam.durationMinutes
   } else show('⚠️ Đã hết thời gian làm bài! Hãy hoàn thành nhanh nhất có thể nhé!')
 })
 const confirm = ref<'close' | 'submit' | null>(null),
-  busy = ref(false)
+  busy = ref(false),
+  aiBusy = ref(false),
+  aiJob = ref<{
+    id: number
+    status: string
+    provider?: string
+    model?: string
+    rubric_version?: number
+    result?: {
+      total_score?: number | null
+      overall_comment?: string | null
+      improvement_suggestion?: string | null
+      confidence?: number | null
+      answers: Array<{
+        practice_question_id?: number | null
+        mock_question_id?: number | null
+        ai_score: number
+        ai_question_comment?: string | null
+      }>
+    } | null
+  } | null>(null)
+const aiHistory = ref<Array<NonNullable<typeof aiJob.value>>>([])
 const isEssay = computed(() => type === 'practice' && exam.questions.length === 1)
 const title = computed(() =>
   mode.value === 'take'
@@ -46,6 +77,14 @@ const ranking = computed(() => {
 })
 onMounted(() => {
   if (mode.value === 'take') timer.start()
+  if (mode.value === 'grade' && isApiEnabled() && result.value && /^\d+$/.test(result.value.id)) {
+    getRemoteAIHistory(result.value.id)
+      .then((items) => {
+        aiHistory.value = items
+        aiJob.value = items[0] || null
+      })
+      .catch(() => undefined)
+  }
 })
 function requestClose() {
   if (mode.value === 'take') confirm.value = 'close'
@@ -125,6 +164,14 @@ async function saveGrade() {
     }
     const saved =
       isApiEnabled() && mode.value === 'grade' ? await gradeRemoteSubmission(record, exam) : record
+    if (isApiEnabled() && mode.value === 'grade') {
+      await saveRemoteFeedback(
+        record.id,
+        record.teacherComment || '',
+        record.teacherImprovementNote || '',
+        !!record.feedbackPublished,
+      )
+    }
     result.value = saved
     if (!isApiEnabled() || mode.value !== 'grade') upsert('results', record)
     show(mode.value === 'grade' ? 'Đã chấm bài thành công! ✅' : 'Đã lưu điểm tự chấm! 🌸')
@@ -132,6 +179,56 @@ async function saveGrade() {
   } catch (e) {
     show((e as Error).message)
   }
+}
+async function requestAI() {
+  if (!result.value || !isApiEnabled()) return
+  aiBusy.value = true
+  try {
+    aiJob.value = await createRemoteAIJob(result.value.id)
+    aiHistory.value = [aiJob.value, ...aiHistory.value]
+    show('Đã tạo yêu cầu AI chấm. Có thể tải lại trạng thái sau khi worker xử lý.')
+  } catch (error) {
+    show((error as Error).message)
+  } finally {
+    aiBusy.value = false
+  }
+}
+async function refreshAI() {
+  if (!aiJob.value) return
+  aiBusy.value = true
+  try {
+    aiJob.value = await getRemoteAIJob(aiJob.value.id)
+    aiHistory.value = aiHistory.value.map((item) =>
+      item.id === aiJob.value?.id ? aiJob.value : item,
+    )
+  } catch (error) {
+    show((error as Error).message)
+  } finally {
+    aiBusy.value = false
+  }
+}
+async function applyAI() {
+  if (!aiJob.value) return
+  aiBusy.value = true
+  try {
+    aiJob.value = await applyRemoteAIJob(aiJob.value.id)
+    aiHistory.value = aiHistory.value.map((item) =>
+      item.id === aiJob.value?.id ? aiJob.value : item,
+    )
+    show('Đã áp dụng điểm AI; giáo viên có thể chỉnh sửa trước khi lưu.')
+  } catch (error) {
+    show((error as Error).message)
+  } finally {
+    aiBusy.value = false
+  }
+}
+function aiForQuestion(index: number) {
+  const questionId = Number(exam.questions[index]?.id)
+  const item = aiJob.value?.result?.answers.find(
+    (answer) =>
+      (type === 'practice' ? answer.practice_question_id : answer.mock_question_id) === questionId,
+  )
+  return item ? { score: item.ai_score, comment: item.ai_question_comment } : undefined
 }
 function confirmed() {
   if (confirm.value === 'submit') submit()
@@ -205,6 +302,9 @@ function label(i: number) {
             <template v-if="result.status === 'graded'">
               <strong>🎉 Điểm cô chấm: {{ result.teacherScore }}/{{ result.maxScore }}đ</strong>
               <p>Lời phê: {{ result.teacherComment }}</p>
+              <p v-if="result.teacherImprovementNote">
+                📌 Gợi ý cải thiện: {{ result.teacherImprovementNote }}
+              </p>
               <p>🏆 Xếp hạng: {{ ranking }}</p>
             </template>
             <template v-else>⌛ Bài làm đang chờ cô Hằng chấm để được xếp hạng.</template>
@@ -218,6 +318,7 @@ function label(i: number) {
             :practice="type === 'practice'"
             :mode="mode"
             :graded="result.status === 'graded'"
+            :ai-answer="mode === 'grade' ? aiForQuestion(i) : undefined"
           />
           <div v-if="mode === 'grade'" class="input-group">
             <label>
@@ -228,6 +329,71 @@ function label(i: number) {
                 placeholder="Bài làm tốt, cần chú ý thêm phần..."
               />
             </label>
+            <label class="mt-2">
+              Gợi ý cải thiện:
+              <textarea
+                v-model="result.teacherImprovementNote"
+                class="input-control"
+                rows="3"
+                placeholder="Học sinh cần cải thiện..."
+              />
+            </label>
+            <label class="flex items-center gap-2 mt-2">
+              <input v-model="result.feedbackPublished" type="checkbox" />
+              Công bố nhận xét cho học sinh
+            </label>
+            <div class="card mt-3" style="background: #eef4ff">
+              <div class="flex gap-2" style="flex-wrap: wrap">
+                <button class="btn btn-sm btn-secondary" :disabled="aiBusy" @click="requestAI">
+                  🤖 Yêu cầu AI chấm
+                </button>
+                <button
+                  v-if="aiJob"
+                  class="btn btn-sm btn-outline"
+                  :disabled="aiBusy"
+                  @click="refreshAI"
+                >
+                  Tải lại AI
+                </button>
+                <button
+                  v-if="aiJob?.status === 'completed'"
+                  class="btn btn-sm btn-primary"
+                  :disabled="aiBusy"
+                  @click="applyAI"
+                >
+                  Áp dụng điểm AI
+                </button>
+              </div>
+              <p v-if="aiJob" class="text-light mt-2">
+                AI: {{ aiJob.status }}
+                <span v-if="aiJob.result?.confidence != null">
+                  · độ tin cậy {{ Math.round(aiJob.result.confidence * 100) }}%
+                </span>
+              </p>
+              <p v-if="aiJob?.result?.overall_comment" class="mt-2">
+                {{ aiJob.result.overall_comment }}
+              </p>
+              <p v-if="aiJob?.result?.improvement_suggestion" class="text-light">
+                {{ aiJob.result.improvement_suggestion }}
+              </p>
+              <div v-if="aiHistory.length > 1" class="mt-3">
+                <strong>Lịch sử các lần chấm AI</strong>
+                <div
+                  v-for="item in aiHistory"
+                  :key="item.id"
+                  class="mt-2"
+                  style="border-top: 1px dashed var(--border-color); padding-top: 8px"
+                >
+                  <button class="btn btn-sm btn-outline" @click="aiJob = item">
+                    Lần #{{ item.id }} · {{ item.status }} · {{ item.provider }} /
+                    {{ item.model }} · barem v{{ item.rubric_version }}
+                  </button>
+                  <span v-if="item.result?.total_score != null" class="text-light ml-2">
+                    {{ item.result.total_score }}đ
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </template>
       </div>

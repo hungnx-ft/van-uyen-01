@@ -36,7 +36,7 @@ async function submit() {
 </script>
 <template>
   <BaseModal
-    :title="`${mode === 'reset' ? 'Đặt lại mật khẩu' : 'Chuyển lớp'}: ${student.fullName}`"
+    :title="`${mode === 'reset' ? 'Đặt lại mật khẩu' : student.isClassStudent ? 'Chuyển lớp' : 'Thêm vào lớp'}: ${student.fullName}`"
     @close="emit('close')"
   >
     <form class="modal-content" @submit.prevent="submit">

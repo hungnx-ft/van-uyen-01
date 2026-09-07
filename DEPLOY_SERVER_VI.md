@@ -537,7 +537,40 @@ Không thêm dấu `/` cuối và không thêm `/vanuyen` vì origin chỉ gồm
 - [ ] Chứng chỉ HTTPS tự gia hạn thành công.
 - [ ] Có backup PostgreSQL ngoài server và đã thử quy trình restore.
 
-## 17. Lưu ý của phiên bản hiện tại
+## 17. Worker chấm AI (khi bật tính năng)
+
+Worker đọc các job `pending`, gọi provider đã cấu hình, lưu kết quả và tự retry tối đa 3 lần. Tạo service riêng:
+
+```ini
+[Unit]
+Description=Van Uyen AI grading worker
+After=network.target postgresql.service vanuyen-api.service
+Requires=postgresql.service
+
+[Service]
+User=vanuyen
+Group=vanuyen
+WorkingDirectory=/opt/van-uyen/app
+ExecStart=/opt/van-uyen/app/.venv/bin/python -m app.worker
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Lưu tại `/etc/systemd/system/vanuyen-ai-worker.service`, sau đó:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now vanuyen-ai-worker
+sudo journalctl -u vanuyen-ai-worker -f
+```
+
+Worker không tự publish kết quả. Giáo viên vẫn phải xem, áp dụng điểm và công bố feedback.
+
+## 18. Lưu ý của phiên bản hiện tại
 
 - `README.md` ở root mô tả bản LocalStorage/HTML cũ và không phản ánh đầy đủ stack production hiện tại; dùng tài liệu này cho triển khai server.
 - Font Google và Font Awesome đang được tải từ CDN, nên giao diện cần Internet phía trình duyệt để hiển thị đúng font/icon.

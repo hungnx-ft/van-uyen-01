@@ -197,6 +197,60 @@ export function useDatabase() {
       (item) => !(item.examId === examId && item.examType === type),
     )
   }
+  async function getRemoteRubric(examId: string, type: 'practice' | 'mock') {
+    return apiRequest<ApiRubric>(`/exams/${type}/${Number(examId)}/rubric`)
+  }
+  async function uploadRemoteRubric(examId: string, type: 'practice' | 'mock', file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    return apiRequest<ApiRubric>(`/exams/${type}/${Number(examId)}/rubric`, {
+      method: 'POST',
+      body: form,
+    })
+  }
+  async function updateRemoteRubric(
+    examId: string,
+    type: 'practice' | 'mock',
+    contentText: string,
+  ) {
+    return apiRequest<ApiRubric>(`/exams/${type}/${Number(examId)}/rubric`, {
+      method: 'PUT',
+      body: JSON.stringify({ content_text: contentText }),
+    })
+  }
+  async function deleteRemoteRubric(examId: string, type: 'practice' | 'mock') {
+    await apiRequest(`/exams/${type}/${Number(examId)}/rubric`, { method: 'DELETE' })
+  }
+  async function createRemoteAIJob(submissionId: string) {
+    return apiRequest<ApiAIJob>(`/ai/submissions/${Number(submissionId)}/jobs`, { method: 'POST' })
+  }
+  async function getRemoteAIJob(jobId: number) {
+    return apiRequest<ApiAIJob>(`/ai/jobs/${jobId}`)
+  }
+  async function getRemoteAIHistory(submissionId: string) {
+    return apiRequest<ApiAIJob[]>(`/ai/submissions/${Number(submissionId)}/history`)
+  }
+  async function getRemoteAIUsage() {
+    return apiRequest<ApiAIUsage>('/ai/usage')
+  }
+  async function applyRemoteAIJob(jobId: number) {
+    return apiRequest<ApiAIJob>(`/ai/jobs/${jobId}/apply`, { method: 'POST' })
+  }
+  async function saveRemoteFeedback(
+    submissionId: string,
+    teacherComment: string,
+    improvement: string,
+    publish: boolean,
+  ) {
+    return apiRequest<ApiFeedback>(`/ai/submissions/${Number(submissionId)}/feedback`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        teacher_comment: teacherComment || null,
+        teacher_improvement_note: improvement || null,
+        publish,
+      }),
+    })
+  }
   async function createRemoteClass(name: string, year: string) {
     const created = await apiRequest<ApiClass>('/classes/', {
       method: 'POST',
@@ -236,6 +290,31 @@ export function useDatabase() {
     const mapped = mapStudent(student)
     data.value.users = [...data.value.users, mapped]
     return mapped
+  }
+  async function createRemoteStudentsBulk(
+    classId: string,
+    students: Array<{
+      username: string
+      password: string
+      fullName: string
+      schoolName?: string
+    }>,
+  ) {
+    const result = await apiRequest<ApiBulkStudentResult>('/users/students/bulk', {
+      method: 'POST',
+      body: JSON.stringify({
+        class_id: Number(classId),
+        students: students.map((student) => ({
+          username: student.username,
+          password: student.password,
+          full_name: student.fullName,
+          school_name: student.schoolName || null,
+        })),
+      }),
+    })
+    const mapped = result.created.map(mapStudent)
+    data.value.users = [...data.value.users, ...mapped]
+    return { ...result, created: mapped }
   }
   async function moveRemoteStudent(studentId: string, classId: string) {
     const student = await apiRequest<ApiStudent>(
@@ -330,10 +409,21 @@ export function useDatabase() {
     createRemoteExam,
     updateRemoteExam,
     deleteRemoteExam,
+    getRemoteRubric,
+    uploadRemoteRubric,
+    updateRemoteRubric,
+    deleteRemoteRubric,
+    createRemoteAIJob,
+    getRemoteAIJob,
+    getRemoteAIHistory,
+    getRemoteAIUsage,
+    applyRemoteAIJob,
+    saveRemoteFeedback,
     createRemoteAssignment,
     createRemoteClass,
     resetRemoteStudentPassword,
     createRemoteStudent,
+    createRemoteStudentsBulk,
     moveRemoteStudent,
     setRemoteStudentStatus,
     deleteRemoteStudent,
@@ -377,6 +467,49 @@ interface ApiAssignment {
   exam_title: string
   created_at: string
 }
+interface ApiRubric {
+  id: number
+  exam_type: 'Practice' | 'Mock'
+  content_text: string
+  original_filename?: string | null
+  version: number
+  created_at: string
+}
+interface ApiAIJob {
+  id: number
+  status: string
+  provider?: string
+  model?: string
+  rubric_version?: number
+  result?: {
+    total_score?: number | null
+    overall_comment?: string | null
+    improvement_suggestion?: string | null
+    confidence?: number | null
+    answers: Array<{
+      practice_question_id?: number | null
+      mock_question_id?: number | null
+      ai_score: number
+      ai_question_comment?: string | null
+    }>
+  } | null
+}
+interface ApiFeedback {
+  submission_id: number
+  teacher_score?: number | null
+  teacher_comment?: string | null
+  teacher_improvement_note?: string | null
+  feedback_published: boolean
+}
+interface ApiAIUsage {
+  total_jobs: number
+  completed_jobs: number
+  failed_jobs: number
+  total_tokens: number
+  estimated_cost_usd: number
+  low_confidence_jobs: number
+  average_score_deviation: number | null
+}
 interface ApiClass {
   id: number
   name: string
@@ -394,6 +527,10 @@ interface ApiStudent {
 }
 interface ApiStudentPage {
   items: ApiStudent[]
+}
+interface ApiBulkStudentResult {
+  created: ApiStudent[]
+  failed: Array<{ row: number; username?: string | null; detail: string }>
 }
 interface ApiSubmissionAnswer {
   id: number
@@ -414,6 +551,8 @@ interface ApiSubmission {
   self_score?: number | null
   teacher_score?: number | null
   teacher_comment?: string | null
+  teacher_improvement_note?: string | null
+  feedback_published?: boolean
   answers: ApiSubmissionAnswer[]
 }
 
@@ -502,6 +641,8 @@ function mapSubmission(submission: ApiSubmission, database: Database, examOverri
     selfScore: submission.self_score ?? undefined,
     teacherScore: submission.teacher_score ?? undefined,
     teacherComment: submission.teacher_comment ?? undefined,
+    teacherImprovementNote: submission.teacher_improvement_note ?? undefined,
+    feedbackPublished: submission.feedback_published ?? false,
     examSnapshot: exam ? JSON.parse(JSON.stringify(exam)) : undefined,
   }
 }

@@ -41,12 +41,11 @@ defineEmits<{
               </button>
               <button class="btn btn-sm btn-primary" @click="$emit('grade', u)">📝 Chấm</button>
               <button
-                v-if="u.isClassStudent"
                 class="btn btn-sm btn-secondary"
-                title="Chuyển lớp"
+                :title="u.isClassStudent ? 'Chuyển lớp' : 'Thêm vào lớp'"
                 @click="$emit('move', u)"
               >
-                ⏩
+                {{ u.isClassStudent ? '⏩' : '➕' }}
               </button>
               <button
                 class="btn btn-sm btn-secondary"

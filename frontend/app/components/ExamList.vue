@@ -12,7 +12,8 @@ const group = ref(props.type === 'practice' ? 'doc-hieu' : 'vao-10'),
   editing = ref(false),
   edit = ref<Exam>(),
   deleting = ref<Exam | null>(null),
-  assigning = ref<Exam | null>(null)
+  assigning = ref<Exam | null>(null),
+  rubricExam = ref<Exam | null>(null)
 const table = computed(() => (props.type === 'practice' ? 'practice_exams' : 'mock_exams'))
 const exams = computed(() => data.value[table.value].filter((e) => e.targetGroup === group.value))
 async function save(exam: Exam) {
@@ -84,6 +85,7 @@ function openEditor(exam?: Exam) {
         @assign="assigning = exam"
         @review="openResult($event)"
         @grade="openResult($event, true)"
+        @rubric="rubricExam = exam"
       />
       <p v-if="!exams.length" class="empty-state">Chưa có đề nào trong mục này.</p>
     </div>
@@ -106,6 +108,12 @@ function openEditor(exam?: Exam) {
       :exam="assigning"
       :type="type"
       @close="assigning = null"
+    />
+    <ExamRubricPanel
+      v-if="rubricExam && isTeacher"
+      :exam="rubricExam"
+      :type="type"
+      @close="rubricExam = null"
     />
   </section>
 </template>

@@ -5,11 +5,14 @@ from app.database.session import get_db
 from app.dependencies.auth import get_current_teacher
 from app.dependencies.permissions import managed_student
 from app.models.user import User
-from app.schemas.student import (StudentCreate, StudentCredentials, StudentPage, StudentResponse,
+from app.schemas.student import (BulkStudentCreate, BulkStudentFailure, BulkStudentResult,
+                                 StudentCreate, StudentCredentials, StudentPage, StudentResponse,
                                  StudentStatus, StudentUpdate)
 from app.schemas.user import UserResponse, UserUpdate
 from app.services.student import change_student_status, delete_student, list_students, update_student
 from app.services.user import create_student_credentials, reset_password, reset_student_credentials
+from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter()
 
@@ -23,6 +26,42 @@ def create_new_student(student_in: StudentCreate, response: Response,
     return StudentCredentials(
         **StudentResponse.model_validate(student).model_dump(), temporary_password=password
     )
+
+
+@router.post("/students/bulk", response_model=BulkStudentResult, status_code=201)
+def create_students_bulk(request: BulkStudentCreate, response: Response,
+                         db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
+    # Validate the destination once, then isolate each row so one duplicate
+    # does not prevent the rest of the spreadsheet from being imported.
+    from app.dependencies.permissions import owned_class
+    owned_class(db, request.class_id, current_user.id, require_active=True)
+    created: list[StudentCredentials] = []
+    failed: list[BulkStudentFailure] = []
+    for row, item in enumerate(request.students, start=2):
+        try:
+            with db.begin_nested():
+                student, password = create_student_credentials(
+                    db,
+                    StudentCreate(
+                        username=item.username or f"student_{row}",
+                        password=item.password,
+                        full_name=item.full_name,
+                        school_name=item.school_name,
+                        class_id=request.class_id,
+                        role="Student",
+                    ),
+                    current_user.id,
+                )
+                created.append(StudentCredentials(
+                    **StudentResponse.model_validate(student).model_dump(),
+                    temporary_password=password,
+                ))
+        except (HTTPException, IntegrityError, ValueError) as exc:
+            detail = exc.detail if isinstance(exc, HTTPException) else str(exc)
+            failed.append(BulkStudentFailure(row=row, username=item.username, detail=str(detail)))
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return BulkStudentResult(created=created, failed=failed)
 
 
 @router.get("/students", response_model=StudentPage)

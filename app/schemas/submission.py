@@ -29,6 +29,8 @@ class SubmissionScoreResponse(BaseModel):
     answer_id: int
     score: float
     teacher_comment: Optional[str] = None
+    teacher_improvement_note: Optional[str] = None
+    feedback_published: bool = False
     teacher_id: int
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)

@@ -8,9 +8,11 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.errors import install_error_handlers
 from app.database.session import get_db
+from app.core.rate_limit import ai_rate_limit
 
 # Schema changes run through Alembic, never as an import side effect.
 app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json")
+app.middleware("http")(ai_rate_limit)
 app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS,
                    allow_credentials=False, allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
                    allow_headers=["Authorization", "Content-Type"],

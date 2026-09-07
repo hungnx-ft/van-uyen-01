@@ -32,7 +32,7 @@ watchEffect(() => {
   const authPage = ['/login', '/register'].includes(route.path)
   if (!user.value && !authPage) navigateTo('/login')
   else if (user.value && authPage) navigateTo('/')
-  else if (route.path === '/manage' && !isTeacher.value) navigateTo('/')
+  else if (['/manage', '/analytics'].includes(route.path) && !isTeacher.value) navigateTo('/')
 })
 </script>
 <template>

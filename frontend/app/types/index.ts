@@ -71,6 +71,8 @@ export interface Result {
   selfScore?: number
   teacherScore?: number
   teacherComment?: string
+  teacherImprovementNote?: string
+  feedbackPublished?: boolean
   examSnapshot?: Exam
 }
 export interface Assignment {

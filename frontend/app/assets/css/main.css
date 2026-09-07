@@ -806,7 +806,7 @@ textarea.input-control {
   font-size: 0.9rem;
   color: var(--text-light);
   cursor: pointer;
-  text-decoration: underline;
+  text-decoration: none;
   font-weight: 600;
 }
 .toggle-login:hover {

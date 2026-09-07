@@ -2,7 +2,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
-from app.schemas.user import AccountCreate, FullName, Password, UserCreate, UserResponse
+from app.schemas.user import AccountCreate, FullName, Password, UserCreate, UserResponse, Username
 
 
 class StudentCreate(UserCreate):
@@ -47,3 +47,25 @@ class StudentPage(BaseModel):
     skip: int
     limit: int
 
+
+class BulkStudentItem(BaseModel):
+    username: Username | None = None
+    full_name: FullName
+    password: Password | None = None
+    school_name: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] | None = None
+
+
+class BulkStudentCreate(BaseModel):
+    class_id: int = Field(gt=0)
+    students: list[BulkStudentItem] = Field(min_length=1, max_length=500)
+
+
+class BulkStudentFailure(BaseModel):
+    row: int
+    username: str | None = None
+    detail: str
+
+
+class BulkStudentResult(BaseModel):
+    created: list[StudentCredentials]
+    failed: list[BulkStudentFailure]

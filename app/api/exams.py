@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.schemas.exam import PracticeExamCreate, PracticeExamResponse, MockExamCreate, MockExamResponse
@@ -9,8 +9,40 @@ from app.dependencies.auth import get_current_teacher, get_current_user
 from app.models.user import User
 from app.models.exam import PracticeExam, MockExam
 from app.dependencies.permissions import visible_content
+from app.schemas.rubric import RubricResponse, RubricTextUpdate
+from app.services.rubric import delete_rubric, latest_rubric, owned_exam, update_rubric_text, upload_rubric
 
 router = APIRouter()
+
+
+@router.post("/{exam_type}/{exam_id}/rubric", response_model=RubricResponse)
+def upload_exam_rubric(exam_type: str, exam_id: int, file: UploadFile = File(...),
+                       db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
+    return upload_rubric(db, exam_type, exam_id, current_user.id, file)
+
+
+@router.get("/{exam_type}/{exam_id}/rubric", response_model=RubricResponse)
+def read_exam_rubric(exam_type: str, exam_id: int, db: Session = Depends(get_db),
+                     current_user: User = Depends(get_current_teacher)):
+    normalized = exam_type.strip().title()
+    owned_exam(db, normalized, exam_id, current_user.id)
+    rubric = latest_rubric(db, normalized, exam_id, current_user.id)
+    if rubric is None:
+        raise HTTPException(404, "Rubric not found")
+    return rubric
+
+
+@router.put("/{exam_type}/{exam_id}/rubric", response_model=RubricResponse)
+def edit_exam_rubric(exam_type: str, exam_id: int, request: RubricTextUpdate,
+                     db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
+    return update_rubric_text(db, exam_type, exam_id, current_user.id, request.content_text)
+
+
+@router.delete("/{exam_type}/{exam_id}/rubric", status_code=204)
+def remove_exam_rubric(exam_type: str, exam_id: int, db: Session = Depends(get_db),
+                       current_user: User = Depends(get_current_teacher)):
+    delete_rubric(db, exam_type, exam_id, current_user.id)
+    return Response(status_code=204)
 
 @router.post("/practice", response_model=PracticeExamResponse)
 def create_new_practice_exam(

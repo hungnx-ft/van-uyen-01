@@ -6,9 +6,12 @@ const links = computed(() => [
   { to: '/theory', label: '🌿 Góc kiến thức' },
   { to: '/practice', label: '🌸 Góc luyện tập' },
   { to: '/exams', label: '🍁 Góc thi thử' },
-  isTeacher.value
-    ? { to: '/manage', label: '🍀 Góc quản lý' }
-    : { to: '/study', label: '📊 Góc học tập' },
+  ...(isTeacher.value
+    ? [
+        { to: '/manage', label: '🍀 Góc quản lý' },
+        { to: '/analytics', label: '📈 Góc phân tích' },
+      ]
+    : [{ to: '/study', label: '📊 Góc học tập' }]),
 ])
 </script>
 <template>

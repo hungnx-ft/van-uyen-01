@@ -1,14 +1,23 @@
 <script setup lang="ts">
 const props = defineProps<{ register?: boolean }>()
-const { login, register: registerAccount } = useAuth(),
+const { login, register: registerAccount, user, logout } = useAuth(),
   { show } = useToast()
 const id = ref(''),
   password = ref(''),
-  name = ref('')
+  name = ref(''),
+  activeTab = ref<'student' | 'teacher'>('student')
 async function submit() {
   try {
     if (props.register) await registerAccount(id.value, password.value, name.value)
-    else await login(id.value, password.value)
+    else {
+      await login(id.value, password.value)
+      if (user.value?.role !== activeTab.value) {
+        await logout()
+        throw new Error(
+          `Tài khoản này không thuộc nhóm ${activeTab.value === 'teacher' ? 'giáo viên' : 'học sinh'}.`,
+        )
+      }
+    }
     await navigateTo('/')
   } catch (e) {
     show((e as Error).message)
@@ -22,7 +31,40 @@ async function submit() {
       <div class="floral-decoration floral-br">🌿</div>
       <h1 class="font-heading text-primary mb-1" style="font-size: 2.2rem">🌸 VĂN UYỂN</h1>
       <p class="text-light mb-4" style="font-style: italic">Nơi chữ nghĩa nở hoa</p>
+      <div
+        v-if="!register"
+        class="tabs mb-4"
+        style="justify-content: center"
+        aria-label="Loại tài khoản đăng nhập"
+      >
+        <button
+          type="button"
+          class="tab-btn"
+          :class="{ active: activeTab === 'student' }"
+          @click="activeTab = 'student'"
+        >
+          🎒 Học sinh
+        </button>
+        <button
+          type="button"
+          class="tab-btn"
+          :class="{ active: activeTab === 'teacher' }"
+          @click="activeTab = 'teacher'"
+        >
+          👩‍🏫 Giáo viên
+        </button>
+      </div>
       <form @submit.prevent="submit">
+        <h2 v-if="!register" class="font-heading mb-2 text-primary">
+          {{ activeTab === 'teacher' ? 'Đăng nhập giáo viên' : 'Đăng nhập học sinh' }}
+        </h2>
+        <p v-if="!register" class="mb-3 text-light">
+          {{
+            activeTab === 'teacher'
+              ? 'Dành cho giáo viên quản lý lớp, đề và chấm bài.'
+              : 'Dành cho học sinh học tập và làm bài.'
+          }}
+        </p>
         <h2 v-if="register" class="font-heading mb-2 text-primary">🌱 Đăng ký Tài khoản Tự do</h2>
         <p v-if="register" class="mb-3 text-light">
           Dành cho học sinh tự học không có tài khoản của trường
@@ -54,7 +96,11 @@ async function submit() {
           {{ register ? 'Tạo tài khoản 🚀' : 'Đăng nhập hệ thống 🔓' }}
         </button>
       </form>
-      <NuxtLink class="toggle-login" :to="register ? '/login' : '/register'">
+      <NuxtLink
+        v-if="register || activeTab === 'student'"
+        class="toggle-login"
+        :to="register ? '/login' : '/register'"
+      >
         {{ register ? '🔑 Đã có tài khoản? Đăng nhập ngay' : '🌱 Đăng ký tài khoản tự do' }}
       </NuxtLink>
     </div>

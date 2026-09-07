@@ -6,6 +6,7 @@ const { data, remove, set, deleteRemoteStudent, setRemoteStudentStatus } = useDa
   { show } = useToast(),
   { openResult } = useWorkspace()
 const filter = ref('all'),
+  activeMenu = ref('students'),
   editing = ref<{ student: User; mode: 'reset' | 'move' } | null>(null),
   deleting = ref<User | null>(null),
   viewing = ref<User | null>(null)
@@ -62,6 +63,12 @@ function viewResult(result: Result, grade = false) {
   viewing.value = null
   openResult(result, grade)
 }
+const managementMenus = [
+  { id: 'students', label: '👥 Học sinh' },
+  { id: 'accounts', label: '➕ Tạo tài khoản' },
+  { id: 'classes', label: '🏫 Lớp học' },
+  { id: 'ai', label: '🤖 Cài đặt AI' },
+]
 </script>
 <template>
   <section v-if="isTeacher" class="panel">
@@ -69,32 +76,46 @@ function viewResult(result: Result, grade = false) {
       <h2 class="section-title" style="margin: 0">🍀 Góc Quản Lý & Cài Đặt</h2>
       <button class="btn btn-danger" @click="logout">Đăng xuất</button>
     </div>
-    <div class="flex gap-4" style="flex-wrap: wrap">
-      <div class="card" style="flex: 1; min-width: min(300px, 100%)">
-        <ClassCreateForm />
-        <hr style="margin: 20px 0; border: none; border-top: 1px dashed var(--border-color)" />
-        <StudentCreateForm />
+    <CategoryTabs v-model="activeMenu" :items="managementMenus" />
+
+    <div v-if="activeMenu === 'students'" class="card mt-3">
+      <div class="flex justify-between items-center mb-3" style="flex-wrap: wrap; gap: 12px">
+        <h3 class="font-heading text-primary">Danh Sách Học Sinh</h3>
+        <select v-model="filter" class="input-control" style="width: 200px" aria-label="Lọc lớp">
+          <option value="all">-- Tất cả Học sinh --</option>
+          <option value="free_class">Lớp Tự do</option>
+          <option v-for="c in data.classes" :key="c.id" :value="c.id">
+            {{ c.name }} ({{ c.year }})
+          </option>
+        </select>
       </div>
-      <div class="card" style="flex: 2; min-width: 0; flex-basis: 400px">
-        <div class="flex justify-between items-center mb-3" style="flex-wrap: wrap; gap: 12px">
-          <h3 class="font-heading text-primary">Danh Sách Học Sinh</h3>
-          <select v-model="filter" class="input-control" style="width: 200px" aria-label="Lọc lớp">
-            <option value="all">-- Tất cả Học sinh --</option>
-            <option value="free_class">Lớp Tự do</option>
-            <option v-for="c in data.classes" :key="c.id" :value="c.id">
-              {{ c.name }} ({{ c.year }})
-            </option>
-          </select>
-        </div>
-        <StudentTable
-          :students="students"
-          @reset="editing = { student: $event, mode: 'reset' }"
-          @move="editing = { student: $event, mode: 'move' }"
-          @remove="deleting = $event"
-          @toggle="toggleStatus"
-          @grade="viewing = $event"
-        />
+      <StudentTable
+        :students="students"
+        @reset="editing = { student: $event, mode: 'reset' }"
+        @move="editing = { student: $event, mode: 'move' }"
+        @remove="deleting = $event"
+        @toggle="toggleStatus"
+        @grade="viewing = $event"
+      />
+    </div>
+
+    <div v-else-if="activeMenu === 'accounts'" class="card mt-3">
+      <h3 class="font-heading text-primary mb-3">Tạo tài khoản học sinh</h3>
+      <p class="text-light mb-3">Tạo từng tài khoản hoặc nhập nhiều học sinh từ file Excel.</p>
+      <div class="flex gap-4" style="flex-wrap: wrap">
+        <div style="flex: 1; min-width: min(300px, 100%)"><StudentCreateForm /></div>
+        <div style="flex: 2; min-width: min(300px, 100%)"><BulkStudentImport /></div>
       </div>
+    </div>
+
+    <div v-else-if="activeMenu === 'classes'" class="card mt-3">
+      <h3 class="font-heading text-primary mb-3">Quản lý lớp học</h3>
+      <ClassCreateForm />
+    </div>
+
+    <div v-else class="card mt-3">
+      <h3 class="font-heading text-primary mb-3">Cài đặt AI</h3>
+      <AISettingsPanel />
     </div>
     <StudentEditModal
       v-if="editing"
