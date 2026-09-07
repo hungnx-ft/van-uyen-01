@@ -16,6 +16,13 @@ const group = ref(props.type === 'practice' ? 'doc-hieu' : 'vao-10'),
   rubricExam = ref<Exam | null>(null)
 const table = computed(() => (props.type === 'practice' ? 'practice_exams' : 'mock_exams'))
 const exams = computed(() => data.value[table.value].filter((e) => e.targetGroup === group.value))
+const categoryItems = computed(() => {
+  const groups = props.type === 'practice' ? practiceGroups : mockGroups
+  return groups.map((item) => ({
+    ...item,
+    count: data.value[table.value].filter((exam) => exam.targetGroup === item.id).length,
+  }))
+})
 async function save(exam: Exam, rubricFile?: File) {
   try {
     requireTeacher()
@@ -65,7 +72,7 @@ function openEditor(exam?: Exam) {
       </h2>
       <button v-if="isTeacher" class="btn btn-primary" @click="openEditor()">＋ Thêm đề mới</button>
     </div>
-    <CategoryTabs v-model="group" :items="type === 'practice' ? practiceGroups : mockGroups" />
+    <CategoryTabs v-model="group" :items="categoryItems" />
     <div class="grid">
       <ExamCard
         v-for="exam in exams"

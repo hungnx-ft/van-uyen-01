@@ -26,8 +26,14 @@ defineEmits<{ open: []; edit: []; remove: [] }>()
     <h3 class="card-title mt-2">{{ article.title }}</h3>
     <p class="card-desc">{{ article.desc }}</p>
     <template v-if="teacher && article.type !== 'core'">
-      <button class="btn btn-outline btn-sm mt-2" @click.stop="$emit('edit')">Sửa bài</button>
-      <button class="btn btn-danger btn-sm mt-2" @click.stop="$emit('remove')">Xóa bài</button>
+      <div class="theory-actions">
+        <button class="btn btn-outline btn-sm" @click.stop="$emit('edit')">Sửa bài</button>
+        <button class="btn btn-danger btn-sm" @click.stop="$emit('remove')">Xóa bài</button>
+      </div>
     </template>
   </div>
 </template>
+
+<style scoped>
+.theory-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+</style>

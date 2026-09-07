@@ -13,6 +13,18 @@ const main = ref('doc-hieu'),
   deleting = ref<TheoryArticle | null>(null)
 watch(main, (value) => (sub.value = subCategories[value]?.[0]?.id || ''))
 const articles = computed(() => data.value.theory_articles.filter((t) => t.subCat === sub.value))
+const mainItems = computed(() =>
+  mainCategories.map((item) => ({
+    ...item,
+    count: data.value.theory_articles.filter((article) => article.mainCat === item.id).length,
+  })),
+)
+const subItems = computed(() =>
+  (subCategories[main.value] || []).map((item) => ({
+    ...item,
+    count: data.value.theory_articles.filter((article) => article.subCat === item.id).length,
+  })),
+)
 function newArticle(): TheoryArticle {
   return { id: crypto.randomUUID(), title: '', mainCat: main.value, subCat: sub.value, type: 'reference', format: 'text', icon: '📚', desc: '', content: '' }
 }
@@ -57,8 +69,8 @@ async function destroy() {
         ＋ Đăng bài viết
       </button>
     </div>
-    <CategoryTabs v-model="main" :items="mainCategories" />
-    <CategoryTabs v-model="sub" :items="subCategories[main] || []" />
+    <CategoryTabs v-model="main" :items="mainItems" />
+    <CategoryTabs v-model="sub" :items="subItems" />
     <div class="grid">
       <TheoryCard
         v-for="article in articles"

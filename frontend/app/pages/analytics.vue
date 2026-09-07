@@ -28,6 +28,14 @@ const filtered = computed(() => {
   )
 })
 const graded = computed(() => filtered.value.filter((result) => result.status === 'graded'))
+const overview = computed(() => ({
+  practice: data.value.practice_exams.length,
+  mock: data.value.mock_exams.length,
+  theory: data.value.theory_articles.length,
+  students: data.value.users.filter((u) => u.role === 'student').length,
+  classes: data.value.classes.length,
+  assignments: data.value.assignments.length,
+}))
 const average = computed(() =>
   graded.value.length
     ? graded.value.reduce((sum, result) => sum + (result.teacherScore || 0), 0) /
@@ -77,11 +85,23 @@ onMounted(async () => {
     </div>
     <div class="grid cols-4 mb-4">
       <div class="card text-center">
-        <div class="stat-value">{{ data.users.filter((u) => u.role === 'student').length }}</div>
+        <div class="stat-value">{{ overview.mock }}</div>
+        <div class="text-light">Đề thi thử</div>
+      </div>
+      <div class="card text-center">
+        <div class="stat-value">{{ overview.practice }}</div>
+        <div class="text-light">Đề luyện tập</div>
+      </div>
+      <div class="card text-center">
+        <div class="stat-value">{{ overview.theory }}</div>
+        <div class="text-light">Bài viết kiến thức</div>
+      </div>
+      <div class="card text-center">
+        <div class="stat-value">{{ overview.students }}</div>
         <div class="text-light">Học sinh</div>
       </div>
       <div class="card text-center">
-        <div class="stat-value">{{ data.classes.length }}</div>
+        <div class="stat-value">{{ overview.classes }}</div>
         <div class="text-light">Lớp</div>
       </div>
       <div class="card text-center">
@@ -91,6 +111,10 @@ onMounted(async () => {
       <div class="card text-center">
         <div class="stat-value">{{ average.toFixed(2) }}</div>
         <div class="text-light">Điểm TB</div>
+      </div>
+      <div class="card text-center">
+        <div class="stat-value">{{ overview.assignments }}</div>
+        <div class="text-light">Đề đã giao</div>
       </div>
     </div>
     <div class="grid cols-2">

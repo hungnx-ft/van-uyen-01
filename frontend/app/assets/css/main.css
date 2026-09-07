@@ -514,6 +514,11 @@ textarea.input-control {
   border-color: var(--secondary);
   color: var(--primary);
 }
+.tab-count {
+  font-size: 0.85em;
+  opacity: 0.8;
+  white-space: nowrap;
+}
 
 /* DASHBOARD */
 .stat-grid {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ items: { id: string; label: string }[] }>()
+defineProps<{ items: { id: string; label: string; count?: number }[] }>()
 const model = defineModel<string>({ required: true })
 </script>
 <template>
@@ -12,7 +12,7 @@ const model = defineModel<string>({ required: true })
       :aria-pressed="model === item.id"
       @click="model = item.id"
     >
-      {{ item.label }}
+      {{ item.label }} <span v-if="item.count !== undefined" class="tab-count">({{ item.count }})</span>
     </button>
   </div>
 </template>

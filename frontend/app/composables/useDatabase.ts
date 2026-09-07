@@ -557,13 +557,14 @@ interface ApiSubmission {
 }
 
 function mapTheory(article: ApiTheory) {
+  const format = String(article.content_type || 'text').toLowerCase()
   return {
     id: String(article.id),
     title: article.title,
     mainCat: article.main_category || '',
     subCat: article.sub_category || '',
-    type: article.content_type,
-    format: article.content_type,
+    type: format,
+    format,
     icon: article.icon || '📚',
     desc: article.description || '',
     content: article.content,
