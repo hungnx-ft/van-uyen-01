@@ -136,7 +136,7 @@ export function useDatabase() {
         content: question.q,
         max_score: question.score,
         answer_key: question.a,
-        ...(type === 'mock' ? { section: index < 5 ? 1 : 2 } : {}),
+        ...(type === 'mock' ? { section: question.section ?? (index < 5 ? 1 : 2) } : {}),
       })),
     }
     const created = await apiRequest<ApiExam>(endpoint, {
@@ -177,7 +177,7 @@ export function useDatabase() {
         content: question.q,
         max_score: question.score,
         answer_key: question.a,
-        ...(type === 'mock' ? { section: index < 5 ? 1 : 2 } : {}),
+        ...(type === 'mock' ? { section: question.section ?? (index < 5 ? 1 : 2) } : {}),
       })),
     }
     const updated = await apiRequest<ApiExam>(endpoint, {
@@ -448,6 +448,7 @@ interface ApiQuestion {
   content: string
   max_score: number
   answer_key?: string
+  section?: 1 | 2
 }
 interface ApiExam {
   id: number
@@ -599,6 +600,7 @@ function mapExam(exam: ApiExam) {
       q: question.content,
       a: question.answer_key || '',
       score: question.max_score,
+      section: question.section,
     })),
   }
 }

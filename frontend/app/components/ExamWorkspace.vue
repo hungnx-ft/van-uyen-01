@@ -270,6 +270,15 @@ function printResult() {
   window.print()
 }
 function label(i: number) {
+  const question = exam.questions[i]!
+  if (type === 'mock') {
+    const section = question.section ?? (i < 5 ? 1 : 2)
+    const sectionIndex =
+      exam.questions.slice(0, i).filter((item, index) => (item.section ?? (index < 5 ? 1 : 2)) === section)
+        .length + 1
+    const sectionLabel = section === 1 ? 'Phần I. Đọc hiểu' : 'Phần II. Viết'
+    return `${sectionLabel} - Câu ${sectionIndex} (${question.score}đ): ${question.q}`
+  }
   return isEssay.value
     ? `Yêu cầu: ${exam.passage}`
     : `${questionLabel(type, i, exam.questions[i]!.score)}: ${exam.questions[i]!.q}`

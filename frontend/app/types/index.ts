@@ -32,6 +32,8 @@ export interface TheoryArticle {
 }
 export interface Question {
   id?: string
+  /** Mock exams use this to keep questions grouped by section (1=reading, 2=writing). */
+  section?: 1 | 2
   q: string
   a: string
   score: number
