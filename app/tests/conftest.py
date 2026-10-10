@@ -9,10 +9,17 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.core import rate_limit
 from app.core.security import get_password_hash
 from app.database import session as database_session
 from app.main import app
 from app.models import User
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limits():
+    for limiter in (rate_limit.ai_limiter, rate_limit.login_ip_limiter, rate_limit.login_user_limiter):
+        limiter.reset()
 
 
 @pytest.fixture

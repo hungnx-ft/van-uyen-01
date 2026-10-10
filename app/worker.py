@@ -42,8 +42,12 @@ async def process_one() -> bool:
         provider = build_provider(provider=job.provider, model=job.model, api_key=decrypt_api_key(setting.api_key_encrypted), base_url=setting.base_url)
         submission = job.submission
         questions = submission.practice_exam.questions if submission.exam_type == "Practice" else submission.mock_exam.questions
-        specs = tuple(QuestionSpec(f"q{q.id}", q.max_score) for q in questions)
-        text = "\n".join(f"q{q.id}: {a.student_answer}" for q, a in zip(questions, submission.answers))
+        # Match answers by question ID: answer rows are not guaranteed to be in
+        # question order, and a student may leave questions out entirely.
+        answers_by_question = {answer.question_id: answer.student_answer for answer in submission.answers}
+        answered = [q for q in sorted(questions, key=lambda q: q.id) if q.id in answers_by_question]
+        specs = tuple(QuestionSpec(f"q{q.id}", q.max_score) for q in answered)
+        text = "\n".join(f"q{q.id}: {answers_by_question[q.id]}" for q in answered)
         response = await provider.grade(GradingRequest(rubric=job.rubric.content_text, submission=text, questions=specs))
         answers = []
         for item in response.answers:
@@ -79,9 +83,10 @@ def main():
     parser.add_argument("--interval", type=float, default=5)
     args = parser.parse_args()
     while True:
-        found = asyncio.run(process_one())
-        if args.once or not found:
+        asyncio.run(process_one())
+        if args.once:
             return
+        # Keep polling when the queue is empty; the pause also spaces out retries of a failing job.
         time.sleep(max(args.interval, 1))
 
 

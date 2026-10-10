@@ -5,8 +5,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-van_uyen_db}
+    # Bound to localhost only so the database is never reachable from outside the host.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -25,6 +26,8 @@ services:
       - SECRET_KEY=${SECRET_KEY:-development-only-change-this-secret-key-before-deploying}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000"]}
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,3 +77,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

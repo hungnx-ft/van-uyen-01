@@ -15,6 +15,17 @@ from app.services.rubric import delete_rubric, latest_rubric, owned_exam, update
 router = APIRouter()
 
 
+def _for_viewer(exams, response_model, user: User):
+    """Students only see answer keys through their own submissions, never in the exam list."""
+    if user.role == "Teacher":
+        return exams
+    items = [response_model.model_validate(exam) for exam in exams]
+    for item in items:
+        for question in item.questions:
+            question.answer_key = ""
+    return items
+
+
 @router.post("/{exam_type}/{exam_id}/rubric", response_model=RubricResponse)
 def upload_exam_rubric(exam_type: str, exam_id: int, file: UploadFile = File(...),
                        db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
@@ -62,7 +73,8 @@ def read_practice_exams(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return visible_content(db, PracticeExam, current_user).offset(max(skip, 0)).limit(min(max(limit, 1), 100)).all()
+    exams = visible_content(db, PracticeExam, current_user).offset(max(skip, 0)).limit(min(max(limit, 1), 100)).all()
+    return _for_viewer(exams, PracticeExamResponse, current_user)
 
 @router.post("/mock", response_model=MockExamResponse)
 def create_new_mock_exam(
@@ -82,7 +94,8 @@ def read_mock_exams(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return visible_content(db, MockExam, current_user).offset(max(skip, 0)).limit(min(max(limit, 1), 100)).all()
+    exams = visible_content(db, MockExam, current_user).offset(max(skip, 0)).limit(min(max(limit, 1), 100)).all()
+    return _for_viewer(exams, MockExamResponse, current_user)
 
 
 @router.put("/practice/{exam_id}", response_model=PracticeExamResponse)

@@ -22,7 +22,7 @@ def update_practice_exam(db: Session, exam_id: int, exam_in: PracticeExamCreate,
     exam.title, exam.target_group, exam.passage, exam.genre, exam.duration_minutes = (
         exam_in.title, exam_in.target_group, exam_in.passage, exam_in.genre, exam_in.duration_minutes
     )
-    exam.questions = [PracticeQuestion(content=q.content, max_score=q.max_score, answer_key=q.answer_key) for q in exam_in.questions]
+    _replace_questions(exam, exam_in.questions, PracticeQuestion, ("content", "max_score", "answer_key"))
     db.flush()
     db.refresh(exam)
     return exam
@@ -36,10 +36,24 @@ def update_mock_exam(db: Session, exam_id: int, exam_in: MockExamCreate, teacher
     exam.title, exam.target_group, exam.passage, exam.genre, exam.duration_minutes = (
         exam_in.title, exam_in.target_group, exam_in.passage, exam_in.genre, exam_in.duration_minutes
     )
-    exam.questions = [MockQuestion(section=q.section, content=q.content, max_score=q.max_score, answer_key=q.answer_key) for q in exam_in.questions]
+    _replace_questions(exam, exam_in.questions, MockQuestion, ("section", "content", "max_score", "answer_key"))
     db.flush()
     db.refresh(exam)
     return exam
+
+
+def _replace_questions(exam, questions_in, model, fields):
+    if not exam.submissions:
+        exam.questions = [model(**{field: getattr(q, field) for field in fields}) for q in questions_in]
+        return
+    # Submitted answers reference question rows, so once students have
+    # submitted only edit the existing questions in place.
+    current = sorted(exam.questions, key=lambda q: q.id)
+    if len(current) != len(questions_in):
+        raise HTTPException(409, "Cannot add or remove questions after students have submitted")
+    for question, q_in in zip(current, questions_in):
+        for field in fields:
+            setattr(question, field, getattr(q_in, field))
 
 
 def _validate_practice(exam_in: PracticeExamCreate):

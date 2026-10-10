@@ -535,7 +535,10 @@ interface ApiBulkStudentResult {
 }
 interface ApiSubmissionAnswer {
   id: number
+  practice_question_id?: number | null
+  mock_question_id?: number | null
   student_answer: string
+  answer_key?: string | null
   score?: { score: number; teacher_comment?: string | null } | null
 }
 interface ApiSubmission {
@@ -613,9 +616,21 @@ function mapSubmission(submission: ApiSubmission, database: Database, examOverri
     database[type === 'practice' ? 'practice_exams' : 'mock_exams'].find(
       (item) => item.id === examId,
     )
+  // Students only receive answer keys through their own submissions.
+  const byQuestion = new Map(
+    submission.answers.map((answer) => [
+      String(answer.practice_question_id ?? answer.mock_question_id ?? ''),
+      answer,
+    ]),
+  )
+  const snapshot: Exam | undefined = exam ? JSON.parse(JSON.stringify(exam)) : undefined
+  snapshot?.questions.forEach((question) => {
+    const key = byQuestion.get(String(question.id))?.answer_key
+    if (key) question.a = key
+  })
   const answers = Object.fromEntries(
-    (exam?.questions || []).map((_, index) => {
-      const apiAnswer = submission.answers[index]
+    (exam?.questions || []).map((question, index) => {
+      const apiAnswer = byQuestion.get(String(question.id))
       return [
         `q${index}`,
         {
@@ -646,7 +661,7 @@ function mapSubmission(submission: ApiSubmission, database: Database, examOverri
     teacherComment: submission.teacher_comment ?? undefined,
     teacherImprovementNote: submission.teacher_improvement_note ?? undefined,
     feedbackPublished: submission.feedback_published ?? false,
-    examSnapshot: exam ? JSON.parse(JSON.stringify(exam)) : undefined,
+    examSnapshot: snapshot,
   }
 }
 
