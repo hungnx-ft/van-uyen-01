@@ -19,13 +19,15 @@ def owned_class(db: Session, class_id: int, teacher_id: int, *, lock: bool = Fal
     return classroom
 
 
-def managed_student(db: Session, student_id: int, teacher_id: int) -> User:
-    # Unassigned/self-registered students are visible to teachers until they
-    # are moved into a class. Once assigned, normal teacher ownership applies.
+def managed_student(db: Session, student_id: int, teacher_id: int, *, allow_unassigned: bool = False) -> User:
+    # Unassigned/self-registered students are visible to every teacher so they
+    # can be moved into a class, but account changes (password, profile,
+    # status, deletion) require the student to be in one of this teacher's classes.
+    owner = Class.teacher_id == teacher_id
     student = db.query(User).outerjoin(Class, User.class_id == Class.id).filter(
         User.id == student_id,
         User.role == "Student",
-        or_(Class.teacher_id == teacher_id, User.class_id.is_(None)),
+        or_(owner, User.class_id.is_(None)) if allow_unassigned else owner,
     ).first()
     if student is None:
         raise HTTPException(404, "Student not found")

@@ -96,8 +96,6 @@ onMounted(load)
           <select v-model="settings.provider" class="input-control">
             <option value="openai-compatible">OpenAI-compatible</option>
             <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic</option>
-            <option value="google">Google Gemini</option>
           </select>
         </label>
       </div>

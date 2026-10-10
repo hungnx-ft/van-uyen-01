@@ -35,17 +35,24 @@ def test_teacher_only_sees_own_classes_and_creates_students_in_own_class(client,
     assert login(client, body["username"], body["password"])
 
 
-def test_teacher_can_manage_free_student_but_not_other_teacher_students(client, db, accounts, classrooms):
+def test_teacher_manages_free_student_only_after_adding_them_to_a_class(client, db, accounts, classrooms):
     headers = bearer(login(client, "teacher_one"))
     free = client.post("/api/v1/auth/register", json={"username": "free_student", "password": "password-123", "full_name": "Tự do"}).json()
     for user_id in (accounts["teacher_two"].id, accounts["student_two"].id, 999999):
         assert client.put(f"/api/v1/users/students/{user_id}/password", headers=headers, json={"password": "new-password"}).status_code == 404
+    # Any teacher can see an unassigned student, but not take over the account.
+    assert client.get(f'/api/v1/users/students/{free["id"]}', headers=headers).status_code == 200
+    assert client.put(f'/api/v1/users/students/{free["id"]}/password', headers=headers, json={"password": "new-password"}).status_code == 404
+    assert client.patch(f'/api/v1/users/students/{free["id"]}/status', headers=headers, json={"is_active": False}).status_code == 404
+    assert client.delete(f'/api/v1/users/students/{free["id"]}', headers=headers).status_code == 404
+
+    assert client.put(f'/api/v1/classes/{classrooms[0].id}/students/{free["id"]}', headers=headers).status_code == 200
     response = client.put(f'/api/v1/users/students/{free["id"]}/password', headers=headers, json={"password": "new-password"})
     assert response.status_code == 200
     assert login(client, "free_student", "new-password")
 
 
-def test_teacher_student_list_includes_self_registered_students(client, accounts):
+def test_teacher_student_list_includes_self_registered_students(client, accounts, classrooms):
     headers = bearer(login(client, "teacher_one"))
     registered = client.post(
         "/api/v1/auth/register",

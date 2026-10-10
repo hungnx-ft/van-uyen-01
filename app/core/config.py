@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/van_uyen_db"
     UPLOAD_DIR: str = "uploads"
+    # Fernet key for stored AI API keys, independent of SECRET_KEY so the JWT
+    # secret can be rotated. Generate with: python -c "from cryptography.fernet
+    # import Fernet; print(Fernet.generate_key().decode())"
+    AI_KEY_ENCRYPTION_KEY: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"
@@ -32,6 +36,12 @@ class Settings(BaseSettings):
                 "supersecretkey_please_change_in_production",
             }:
                 raise ValueError("Production requires a unique SECRET_KEY of at least 32 characters")
+        if self.AI_KEY_ENCRYPTION_KEY:
+            from cryptography.fernet import Fernet
+            try:
+                Fernet(self.AI_KEY_ENCRYPTION_KEY)
+            except ValueError as exc:
+                raise ValueError("AI_KEY_ENCRYPTION_KEY must be a Fernet key") from exc
         return self
 
 

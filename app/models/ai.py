@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Text, Float
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Text, Float, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func, false
 
@@ -9,7 +9,7 @@ class AISetting(Base):
     __tablename__ = "ai_settings"
 
     id = Column(Integer, primary_key=True)
-    teacher_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    teacher_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     provider = Column(String(50), nullable=False)
     model = Column(String(150), nullable=False)
     base_url = Column(String(500), nullable=True)
@@ -19,6 +19,8 @@ class AISetting(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     teacher = relationship("User")
+    # Matches migration 0006: a named unique constraint plus a plain index.
+    __table_args__ = (UniqueConstraint("teacher_id", name="uq_ai_settings_teacher_id"),)
 
 
 class ExamRubric(Base):

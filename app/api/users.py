@@ -75,7 +75,7 @@ def read_students(class_id: int | None = Query(None, gt=0), q: str = Query("", m
 
 @router.get("/students/{student_id}", response_model=StudentResponse)
 def read_student(student_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
-    return managed_student(db, student_id, current_user.id)
+    return managed_student(db, student_id, current_user.id, allow_unassigned=True)
 
 
 @router.patch("/students/{student_id}", response_model=StudentResponse)

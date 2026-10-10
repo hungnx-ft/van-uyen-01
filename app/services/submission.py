@@ -65,6 +65,9 @@ def grade_submission(db: Session, submission_id: int, scores_in: List[Submission
             raise HTTPException(422, "Answer does not belong to this submission")
         if score.score < 0:
             raise HTTPException(422, "Score must be non-negative")
+        question = answer.practice_question or answer.mock_question
+        if question and score.score > question.max_score + 1e-6:
+            raise HTTPException(422, "Score exceeds the question's maximum")
     return submission_repo.grade_submission(
         db, db_obj=submission, scores_in=scores_in, teacher_id=teacher_id, teacher_comment=teacher_comment
     )

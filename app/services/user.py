@@ -44,9 +44,9 @@ def reset_password(db: Session, student_id: int, new_password: str, teacher_id: 
 
 
 def move_student_class(db: Session, student_id: int, new_class_id: int, teacher_id: int) -> User:
-    managed_student(db, student_id, teacher_id)
+    managed_student(db, student_id, teacher_id, allow_unassigned=True)
     student = db.query(User).filter(User.id == student_id).with_for_update().populate_existing().one()
-    managed_student(db, student_id, teacher_id)
+    managed_student(db, student_id, teacher_id, allow_unassigned=True)
     owned_class(db, new_class_id, teacher_id, lock=True, require_active=True)
     student.class_id = new_class_id
     db.flush()
