@@ -61,9 +61,9 @@ Các bảng vẫn dùng khóa `vu_users`, `vu_classes`, `vu_theory_articles`, `v
 
 Tài khoản giáo viên mẫu giống bản HTML, được khai báo trong `app/repositories/localDatabase.ts` và chỉ thêm khi bảng `vu_users` chưa tồn tại. Bảng rỗng có chủ đích không bị seed lại. Mật khẩu đã đổi không bị ghi đè khi reload.
 
-Ở chế độ local, mật khẩu và đáp án nằm trong trình duyệt, phân quyền frontend không thay thế xác thực server. Khi bật `NUXT_PUBLIC_API_BASE`, đăng nhập/đăng ký, refresh token, đổi mật khẩu, đăng xuất, tạo lớp, đăng bài, tạo đề, giao đề, nộp bài, tải lịch sử, anti-cheat và chấm bài gọi backend FastAPI; access/refresh token chỉ lưu trong SessionStorage. API hiện chưa có endpoint sửa/xóa bài và đề nên giao diện sẽ báo rõ thao tác này chưa được hỗ trợ ở backend. Font Google và Font Awesome dùng URL giống bản HTML.
+Ở chế độ local, mật khẩu và đáp án nằm trong trình duyệt, phân quyền frontend không thay thế xác thực server. Khi bật `NUXT_PUBLIC_API_BASE`, đăng nhập/đăng ký, refresh token, đổi mật khẩu, đăng xuất, tạo lớp, đăng bài, tạo đề, giao đề, nộp bài, tải lịch sử, anti-cheat và chấm bài gọi backend FastAPI; access/refresh token chỉ lưu trong SessionStorage. Font Google và Font Awesome dùng URL giống bản HTML.
 
-Bài làm mới lưu snapshot đề để có thể xem lại sau khi đề được sửa/xóa. Bài cũ không có snapshot cần còn đề gốc. Bài luyện tập được lưu khi nộp trước bước tự chấm; đóng cửa sổ tự chấm không làm mất bài đã nộp. Bài đang nhập chưa nộp chưa có autosave; đóng workspace sẽ hỏi xác nhận.
+Bài làm mới lưu snapshot đề để có thể xem lại sau khi đề được sửa/xóa. Ở chế độ backend, học sinh không nhận đáp án qua danh sách đề; màn xem lại lấy đáp án từ bài nộp (luyện tập: ngay sau khi nộp; thi thử: sau khi giáo viên công bố). Bài cũ không có snapshot cần còn đề gốc. Bài luyện tập được lưu khi nộp trước bước tự chấm; đóng cửa sổ tự chấm không làm mất bài đã nộp. Bài đang nhập chưa nộp chưa có autosave; đóng workspace sẽ hỏi xác nhận.
 
 Một số lỗi cũ đã xử lý trong quá trình chuyển: ID mẫu trùng, reset mật khẩu giáo viên khi tải trang, lọc sai nhóm sau lưu đề, thiếu số lần làm, timer và listener không được dọn.
 

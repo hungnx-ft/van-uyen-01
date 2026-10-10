@@ -166,12 +166,15 @@ Nội dung (thay hai giá trị bí mật):
 ```dotenv
 ENVIRONMENT=production
 SECRET_KEY=SECRET_NGAU_NHIEN_VUA_TAO
+AI_KEY_ENCRYPTION_KEY=KHOA_FERNET_VUA_TAO
 DATABASE_URL=postgresql://vanuyen_app:MAT_KHAU_DB_VUA_TAO@127.0.0.1:5432/vanuyen_db
 CORS_ORIGINS=["https://hungnguyenxuan.info"]
 UPLOAD_DIR=/opt/van-uyen/data/uploads
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
 ```
+
+`AI_KEY_ENCRYPTION_KEY` mã hóa API key AI, tạo bằng `.venv/bin/python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Có thể để trống nếu chưa dùng AI.
 
 Lưu ý: CORS dùng **origin**, vì vậy không thêm `/vanuyen` vào `CORS_ORIGINS`. Không commit `.env` lên Git và không dùng secret mẫu trong source.
 
@@ -539,7 +542,7 @@ Không thêm dấu `/` cuối và không thêm `/vanuyen` vì origin chỉ gồm
 
 ## 17. Worker chấm AI (khi bật tính năng)
 
-Worker đọc các job `pending`, gọi provider đã cấu hình, lưu kết quả và tự retry tối đa 3 lần. Tạo service riêng:
+Worker đọc các job `pending`, gọi provider đã cấu hình (OpenAI hoặc OpenAI-compatible), lưu kết quả và tự retry tối đa 3 lần. Job bị kẹt ở `processing` quá 10 phút (worker dừng giữa chừng) được tự đưa lại hàng đợi. Tạo service riêng:
 
 ```ini
 [Unit]
@@ -572,7 +575,6 @@ Worker không tự publish kết quả. Giáo viên vẫn phải xem, áp dụng
 
 ## 18. Lưu ý của phiên bản hiện tại
 
-- `README.md` ở root mô tả bản LocalStorage/HTML cũ và không phản ánh đầy đủ stack production hiện tại; dùng tài liệu này cho triển khai server.
 - Font Google và Font Awesome đang được tải từ CDN, nên giao diện cần Internet phía trình duyệt để hiển thị đúng font/icon.
 - Backend có thư mục upload và giới hạn file 5 MB, nhưng luồng frontend hiện chủ yếu lưu nội dung/ảnh/PDF trong trường dữ liệu API. Vẫn nên backup cả PostgreSQL lẫn `/opt/van-uyen/data/uploads`.
 - Đừng dùng SQLite thay PostgreSQL: migration và cấu hình production của repository này đã được xây dựng cho PostgreSQL.

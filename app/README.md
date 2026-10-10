@@ -1,6 +1,6 @@
-# Backend VĂN UYỂN — Giai đoạn 2
+# Backend VĂN UYỂN
 
-FastAPI + SQLAlchemy + PostgreSQL. Giai đoạn này hoàn thiện schema nghiệp vụ, migration, hợp đồng dữ liệu cho bài giảng/đề/bài nộp/giao đề và giữ nền auth, phân quyền, transaction của giai đoạn 1. Chưa nối Nuxt.
+FastAPI + SQLAlchemy + PostgreSQL: auth, phân quyền, lớp/học sinh, bài giảng, đề, bài nộp, giao đề, chấm bài và chấm bằng AI. Frontend Nuxt trong `frontend/` gọi API này khi đặt `NUXT_PUBLIC_API_BASE`. Tổng quan dự án xem `README.md` ở thư mục gốc.
 
 ## Chạy với Docker
 
@@ -14,6 +14,8 @@ Compose chờ PostgreSQL sẵn sàng, chạy `alembic upgrade head`, rồi mở 
 Chạy Python trực tiếp: dùng Python 3.12, virtualenv, `pip install -r requirements.txt`, PostgreSQL; thiết lập `DATABASE_URL`, chạy `alembic upgrade head` rồi `uvicorn app.main:app --reload`.
 
 Production phải đặt `ENVIRONMENT=production`, secret riêng tối thiểu 32 ký tự và CORS origin frontend cụ thể. Secret mẫu bị từ chối trong production. Ví dụ sinh secret: `python -c 'import secrets; print(secrets.token_urlsafe(48))'`. Không commit `.env`.
+
+Nên đặt thêm `AI_KEY_ENCRYPTION_KEY` (khóa Fernet) để mã hóa API key AI tách khỏi `SECRET_KEY`: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. API key đã lưu trước đó vẫn giải mã được; giáo viên lưu lại key một lần để chuyển sang khóa mới.
 
 ## Database đang có từ bản cũ
 
@@ -50,6 +52,8 @@ CLI hỏi mật khẩu bằng `getpass`; automation có thể truyền biến `S
 
 Đăng ký tự do luôn tạo Student, `class_id=null`, `is_active=true`. Các field role/class/status bị từ chối thay vì nhận từ client.
 
+Đăng nhập bị giới hạn 20 lần/phút mỗi IP và 10 lần/5 phút mỗi username (trả 429 kèm `Retry-After`); các endpoint `/api/v1/ai/` giới hạn 60 request/phút mỗi IP. Bộ đếm nằm trong bộ nhớ từng process. Sau reverse proxy, chạy uvicorn với `--proxy-headers --forwarded-allow-ips=<IP proxy>` để lấy đúng IP người dùng.
+
 Ví dụ kết quả login:
 
 ```json
@@ -69,9 +73,10 @@ Giai đoạn này API dùng Bearer và JSON token, không tự ghi cookie. Khi n
 
 - Teacher chỉ list lớp của mình; tạo học sinh vào lớp mình sở hữu.
 - `POST /users/students`: yêu cầu `username`, `password`, `full_name`, `class_id`; `school_name` tùy chọn, role nếu gửi chỉ được là `Student`.
-- Reset mật khẩu chỉ áp dụng cho Student đang thuộc lớp của Teacher; không áp dụng cho giáo viên, học sinh tự do hoặc lớp người khác.
-- Chuyển lớp chỉ được giữa hai lớp thuộc cùng Teacher. Giai đoạn 2 sẽ mở rộng quản lý membership theo spec tiếp theo.
-- Teacher xem thư viện đề/bài giảng mình tạo. Học sinh thuộc lớp xem nội dung của giáo viên lớp đó. Học sinh tự do xem thư viện chung; khi có giao đề/trạng thái xuất bản sẽ bổ sung chính sách tương ứng.
+- Học sinh tự đăng ký (chưa có lớp) hiện với mọi Teacher để xem và thêm vào lớp. Reset mật khẩu, sửa thông tin, khóa và xóa chỉ áp dụng cho Student đang thuộc lớp của Teacher; không áp dụng cho giáo viên, học sinh tự do hoặc lớp người khác.
+- Chuyển lớp chỉ được giữa hai lớp thuộc cùng Teacher, hoặc từ trạng thái chưa có lớp vào lớp của Teacher.
+- Teacher xem thư viện đề/bài giảng mình tạo. Học sinh thuộc lớp xem nội dung của giáo viên lớp đó. Học sinh tự do xem thư viện chung.
+- Danh sách đề trả về cho Student luôn có `answer_key` rỗng. Đáp án chỉ đi kèm từng câu trả lời trong bài nộp của chính học sinh: đề luyện tập trả ngay khi nộp; đề thi thử chỉ trả sau khi giáo viên công bố kết quả.
 - Học sinh chỉ thấy lịch sử bản thân; chỉ ghi anti-cheat cho bài của mình.
 - Teacher chỉ chấm đề của mình; với học sinh thuộc lớp, lớp đó cũng phải thuộc Teacher. Không chấm được bằng ID câu trả lời của một bài khác.
 - Tài nguyên ngoài quyền trả 404 để không tiết lộ sự tồn tại.
@@ -92,7 +97,13 @@ Giai đoạn này API dùng Bearer và JSON token, không tự ghi cookie. Khi n
 
 Backend không cung cấp import/export bảng tính; học sinh được tạo và quản lý qua API JSON.
 
-Các quy tắc nâng cao của đề/chấm bài (giới hạn điểm, chấm lại, thời gian thi, lượt làm) vẫn ở giai đoạn sau. Upload hiện được đổi sang tên do server sinh và giới hạn 5 MB để không thể ghi đè đường dẫn do client cung cấp; kiểm tra nội dung file và API đọc/tải tài liệu thuộc module kiến thức.
+## Chấm bằng AI
+
+Provider hỗ trợ: `openai` và `openai-compatible` (Chat Completions). Giáo viên cấu hình ở `PUT /api/v1/ai/settings`, tải barem ở `POST /api/v1/exams/{practice|mock}/{exam_id}/rubric`, rồi tạo job ở `POST /api/v1/ai/submissions/{submission_id}/jobs` (hoặc `/ai/submissions/bulk-jobs`). Kết quả chỉ được chép vào bài nộp khi giáo viên gọi `POST /api/v1/ai/jobs/{job_id}/apply`.
+
+Worker `python -m app.worker` (hoặc `--once` cho cron) lấy job `pending`, ghép câu trả lời với câu hỏi theo ID và gọi provider. Mỗi job thử tối đa 3 lần; `retry` đặt lại số lần thử. Job `processing` quá 10 phút được coi là worker đã chết và đưa lại hàng đợi. Job bị hủy trong lúc chấm thì kết quả về sau bị bỏ. Ở production, Base URL phải là HTTPS và phân giải ra địa chỉ public.
+
+Điểm chấm tay và điểm AI không được vượt điểm tối đa của câu; tổng điểm AI không vượt điểm tối đa của đề. Đề đã có bài nộp chỉ sửa được nội dung, điểm và đáp án của các câu hiện có; thêm/bớt câu trả 409 để không làm mất liên kết với bài đã nộp. Upload hiện được đổi sang tên do server sinh và giới hạn 5 MB để không thể ghi đè đường dẫn do client cung cấp; kiểm tra nội dung file và API đọc/tải tài liệu thuộc module kiến thức.
 
 ## Transaction và lỗi
 
