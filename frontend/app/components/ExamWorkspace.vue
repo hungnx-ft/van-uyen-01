@@ -350,7 +350,7 @@ function label(i: number) {
             v-for="(q, i) in exam.questions"
             :key="i"
             v-model="result.answers[`q${i}`]!"
-            :question="q"
+            :question="result.examSnapshot?.questions[i] ?? q"
             :label="label(i)"
             :practice="type === 'practice'"
             :mode="mode"

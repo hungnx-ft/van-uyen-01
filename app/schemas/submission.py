@@ -40,6 +40,7 @@ class SubmissionAnswerResponse(BaseModel):
     practice_question_id: Optional[int]
     mock_question_id: Optional[int]
     student_answer: str
+    answer_key: Optional[str] = None
     score: Optional[SubmissionScoreResponse] = None
     model_config = ConfigDict(from_attributes=True)
 

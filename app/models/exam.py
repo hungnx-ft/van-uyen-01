@@ -17,7 +17,7 @@ class PracticeExam(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     teacher = relationship("User", back_populates="practice_exams")
-    questions = relationship("PracticeQuestion", back_populates="exam", cascade="all, delete-orphan")
+    questions = relationship("PracticeQuestion", back_populates="exam", cascade="all, delete-orphan", order_by="PracticeQuestion.id")
     submissions = relationship("Submission", back_populates="practice_exam")
 
 class PracticeQuestion(Base):
@@ -47,7 +47,7 @@ class MockExam(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     teacher = relationship("User", back_populates="mock_exams")
-    questions = relationship("MockQuestion", back_populates="exam", cascade="all, delete-orphan")
+    questions = relationship("MockQuestion", back_populates="exam", cascade="all, delete-orphan", order_by="MockQuestion.id")
     submissions = relationship("Submission", back_populates="mock_exam")
 
 class MockQuestion(Base):

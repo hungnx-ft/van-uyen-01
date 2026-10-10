@@ -51,6 +51,17 @@ class SubmissionAnswer(Base):
 
     submission = relationship("Submission", back_populates="answers")
     score = relationship("SubmissionScore", back_populates="answer", uselist=False, cascade="all, delete-orphan")
+    practice_question = relationship("PracticeQuestion", viewonly=True)
+    mock_question = relationship("MockQuestion", viewonly=True)
+
+    @property
+    def question_id(self):
+        return self.practice_question_id or self.mock_question_id
+
+    @property
+    def answer_key(self):
+        question = self.practice_question or self.mock_question
+        return question.answer_key if question else None
 
 class SubmissionScore(Base):
     __tablename__ = "submission_scores"
