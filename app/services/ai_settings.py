@@ -1,9 +1,11 @@
 import base64
 import hashlib
+import ipaddress
+import socket
 
 import httpx
 from urllib.parse import urlparse
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet, InvalidToken, MultiFernet
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -11,12 +13,18 @@ from app.core.config import settings
 from app.models.ai import AISetting
 from app.schemas.ai import AISettingsUpdate
 
-SUPPORTED_PROVIDERS = {"openai", "openai-compatible", "anthropic", "google"}
+# Must match the adapters in app.services.ai_providers.build_provider.
+SUPPORTED_PROVIDERS = {"openai", "openai-compatible"}
 
 
-def _fernet() -> Fernet:
-    key = base64.urlsafe_b64encode(hashlib.sha256(settings.SECRET_KEY.encode()).digest())
-    return Fernet(key)
+def _fernet() -> MultiFernet:
+    # Keys saved before AI_KEY_ENCRYPTION_KEY existed were encrypted with a key
+    # derived from SECRET_KEY; keep it last so they still decrypt, while new
+    # values are encrypted with the dedicated key.
+    legacy = Fernet(base64.urlsafe_b64encode(hashlib.sha256(settings.SECRET_KEY.encode()).digest()))
+    if settings.AI_KEY_ENCRYPTION_KEY:
+        return MultiFernet([Fernet(settings.AI_KEY_ENCRYPTION_KEY), legacy])
+    return MultiFernet([legacy])
 
 
 def encrypt_api_key(value: str) -> str:
@@ -37,6 +45,21 @@ def _validate_provider(provider: str) -> str:
     if normalized not in SUPPORTED_PROVIDERS:
         raise HTTPException(422, "Unsupported AI provider")
     return normalized
+
+
+def ensure_public_base_url(base_url: str | None):
+    """In production, refuse provider URLs that resolve to internal addresses (SSRF)."""
+    if not base_url or settings.ENVIRONMENT != "production":
+        return
+    host = urlparse(base_url).hostname or ""
+    try:
+        addresses = {info[4][0] for info in socket.getaddrinfo(host, None)}
+    except (socket.gaierror, UnicodeError) as exc:
+        raise HTTPException(422, "Base URL host cannot be resolved") from exc
+    for address in addresses:
+        ip = ipaddress.ip_address(address.split("%")[0])
+        if not ip.is_global:
+            raise HTTPException(422, "Base URL must point to a public host")
 
 
 def get_settings(db: Session, teacher_id: int) -> AISetting | None:
@@ -66,6 +89,7 @@ def save_settings(db: Session, teacher_id: int, request: AISettingsUpdate) -> AI
             raise HTTPException(422, "Base URL must be a valid HTTP(S) URL")
         if settings.ENVIRONMENT == "production" and parsed.scheme != "https":
             raise HTTPException(422, "Production Base URL must use HTTPS")
+        ensure_public_base_url(base_url)
     item.base_url = base_url
     item.is_enabled = request.is_enabled
     if request.api_key is not None:
@@ -90,14 +114,12 @@ def _endpoint(item: AISetting) -> tuple[str, dict[str, str], dict[str, str]]:
     key = decrypt_api_key(item.api_key_encrypted)
     if not key:
         raise HTTPException(422, "AI API key is not configured")
-    provider = item.provider
-    if provider in {"openai", "openai-compatible"}:
-        base = (item.base_url or "https://api.openai.com/v1").rstrip("/")
-        return f"{base}/models", {"Authorization": f"Bearer {key}"}, {}
-    if provider == "anthropic":
-        base = (item.base_url or "https://api.anthropic.com").rstrip("/")
-        return f"{base}/v1/models", {"x-api-key": key, "anthropic-version": "2023-06-01"}, {}
-    return "https://generativelanguage.googleapis.com/v1beta/models", {}, {"key": key}
+    if item.provider not in SUPPORTED_PROVIDERS:
+        raise HTTPException(422, "Unsupported AI provider; choose OpenAI or an OpenAI-compatible API")
+    # Re-check at request time: DNS for a saved host may have changed.
+    ensure_public_base_url(item.base_url)
+    base = (item.base_url or "https://api.openai.com/v1").rstrip("/")
+    return f"{base}/models", {"Authorization": f"Bearer {key}"}, {}
 
 
 async def test_connection(db: Session, teacher_id: int) -> tuple[bool, str]:

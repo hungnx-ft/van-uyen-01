@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.ai import AIGradingAnswer, AIGradingJob, AIGradingResult
+from app.models.exam import MockExam, PracticeExam
 from app.models.submission import Submission, SubmissionScore
 from app.schemas.ai import AIGradingResultInput
 from app.services.ai_settings import get_settings
@@ -54,19 +56,18 @@ def list_history(db: Session, submission_id: int, teacher_id: int) -> list[AIGra
 
 
 def list_jobs(db: Session, teacher_id: int, status: str | None = None) -> list[AIGradingJob]:
-    query = db.query(AIGradingJob).join(Submission, AIGradingJob.submission_id == Submission.id)
-    # Ownership is checked per submission so jobs cannot leak across teachers.
-    jobs = query.order_by(AIGradingJob.created_at.desc(), AIGradingJob.id.desc()).all()
-    visible = [job for job in jobs if _is_owned_submission(db, job.submission_id, teacher_id)]
-    return [job for job in visible if status is None or job.status == status]
-
-
-def _is_owned_submission(db: Session, submission_id: int, teacher_id: int) -> bool:
-    try:
-        owned_submission(db, submission_id, teacher_id)
-        return True
-    except HTTPException:
-        return False
+    # Ownership follows the submission's exam so jobs cannot leak across teachers.
+    query = (db.query(AIGradingJob)
+             .options(selectinload(AIGradingJob.result).selectinload(AIGradingResult.answers),
+                      selectinload(AIGradingJob.submission))
+             .join(Submission, AIGradingJob.submission_id == Submission.id)
+             .outerjoin(PracticeExam, Submission.practice_exam_id == PracticeExam.id)
+             .outerjoin(MockExam, Submission.mock_exam_id == MockExam.id)
+             .filter(or_(and_(Submission.exam_type == "Practice", PracticeExam.teacher_id == teacher_id),
+                         and_(Submission.exam_type == "Mock", MockExam.teacher_id == teacher_id))))
+    if status is not None:
+        query = query.filter(AIGradingJob.status == status)
+    return query.order_by(AIGradingJob.created_at.desc(), AIGradingJob.id.desc()).all()
 
 
 def create_bulk_jobs(db: Session, submission_ids: list[int], teacher_id: int) -> tuple[list[AIGradingJob], list[dict[str, str | int]]]:
@@ -85,6 +86,7 @@ def retry_job(db: Session, job_id: int, teacher_id: int) -> AIGradingJob:
     if job.status != "failed":
         raise HTTPException(409, "Only failed jobs can be retried")
     job.status = "pending"
+    job.attempt_count = 0
     job.error_message = None
     job.started_at = None
     job.completed_at = None
@@ -108,7 +110,9 @@ def complete_job(db: Session, job_id: int, teacher_id: int, request: AIGradingRe
     if job.result:
         raise HTTPException(409, "AI grading result already exists")
     submission = owned_submission(db, job.submission_id, teacher_id)
-    valid_ids = {answer.practice_question_id or answer.mock_question_id for answer in submission.answers}
+    exam = submission.practice_exam if submission.exam_type == "Practice" else submission.mock_exam
+    max_scores = {question.id: question.max_score for question in exam.questions}
+    valid_ids = {answer.question_id for answer in submission.answers}
     seen: set[int] = set()
     for item in request.answers:
         question_id = item.practice_question_id or item.mock_question_id
@@ -116,7 +120,11 @@ def complete_job(db: Session, job_id: int, teacher_id: int, request: AIGradingRe
             raise HTTPException(422, "AI result references an invalid question")
         if question_id in seen:
             raise HTTPException(422, "AI result contains duplicate questions")
+        if item.ai_score > max_scores[question_id] + 1e-6:
+            raise HTTPException(422, "AI score exceeds the question's maximum")
         seen.add(question_id)
+    if request.total_score is not None and request.total_score > sum(max_scores.values()) + 1e-6:
+        raise HTTPException(422, "AI total score exceeds the exam maximum")
     result = AIGradingResult(job_id=job.id, submission_id=submission.id, total_score=request.total_score,
                              overall_comment=request.overall_comment, improvement_suggestion=request.improvement_suggestion,
                              confidence=request.confidence, raw_response=request.raw_response)
