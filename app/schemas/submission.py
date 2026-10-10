@@ -12,6 +12,8 @@ class SubmissionCreate(BaseModel):
     practice_exam_id: Optional[int] = None
     mock_exam_id: Optional[int] = None
     answers: List[SubmissionAnswerCreate]
+    attempt: int = 1
+    submitted_at: Optional[datetime] = None
 
 class AntiCheatEvent(BaseModel):
     submission_id: int
@@ -27,6 +29,8 @@ class SubmissionScoreResponse(BaseModel):
     answer_id: int
     score: float
     teacher_comment: Optional[str] = None
+    teacher_improvement_note: Optional[str] = None
+    feedback_published: bool = False
     teacher_id: int
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -42,14 +46,21 @@ class SubmissionAnswerResponse(BaseModel):
 class SubmissionResponse(BaseModel):
     id: int
     student_id: int
+    student_name: str = ""
     exam_type: str
     practice_exam_id: Optional[int]
     mock_exam_id: Optional[int]
     leave_tab_count: int
     status: str
     created_at: datetime
+    attempt: int
+    submitted_at: Optional[datetime] = None
+    self_score: Optional[float] = None
+    teacher_score: Optional[float] = None
+    teacher_comment: Optional[str] = None
     answers: List[SubmissionAnswerResponse]
     model_config = ConfigDict(from_attributes=True)
 
 class GradeSubmissionRequest(BaseModel):
     scores: List[SubmissionScoreCreate]
+    teacher_comment: Optional[str] = None

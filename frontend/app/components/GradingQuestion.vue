@@ -7,6 +7,7 @@ defineProps<{
   practice: boolean
   mode: 'self' | 'grade' | 'review'
   graded: boolean
+  aiAnswer?: { score: number; comment?: string | null }
 }>()
 const answer = defineModel<Answer>({ required: true })
 </script>
@@ -61,6 +62,11 @@ const answer = defineModel<Answer>({ required: true })
             Lời phê: {{ answer.teacherComment }}
           </p>
         </template>
+      </div>
+      <div v-if="aiAnswer" class="grading-col" style="background: #eef4ff">
+        <span class="grading-col-title">AI đề xuất</span>
+        <div class="grading-text">{{ aiAnswer.score }}đ</div>
+        <p v-if="aiAnswer.comment" class="mt-2 text-light">{{ aiAnswer.comment }}</p>
       </div>
     </div>
   </div>

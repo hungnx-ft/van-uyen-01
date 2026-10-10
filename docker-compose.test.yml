@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: stage1_test
+      POSTGRES_PASSWORD: stage1_test
+      POSTGRES_DB: van_uyen_stage1_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stage1_test -d van_uyen_stage1_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      ENVIRONMENT: test
+      SECRET_KEY: stage1-isolated-test-secret-not-used-in-production
+      DATABASE_URL: postgresql://stage1_test:stage1_test@db:5432/van_uyen_stage1_test
+      TEST_DATABASE_URL: postgresql://stage1_test:stage1_test@db:5432/van_uyen_stage1_test
+    depends_on:
+      db:
+        condition: service_healthy

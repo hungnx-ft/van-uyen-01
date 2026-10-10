@@ -4,15 +4,20 @@ defineProps<{ students: User[] }>()
 defineEmits<{
   reset: [user: User]
   move: [user: User]
+  toggle: [user: User]
   remove: [user: User]
-  grade: [user: User]
+  detail: [user: User]
 }>()
+function studentCode(user: User) {
+  return user.studentCode || `HS-${String(user.id).replace(/\D/g, '').padStart(5, '0')}`
+}
 </script>
 <template>
   <div style="overflow-x: auto">
     <table class="leaderboard-table" style="font-size: 0.9rem">
       <thead>
         <tr>
+          <th>Mã HS</th>
           <th>Họ Tên</th>
           <th>Lớp</th>
           <th>Tài Khoản</th>
@@ -22,10 +27,14 @@ defineEmits<{
       </thead>
       <tbody>
         <tr v-for="u in students" :key="u.id">
-          <td>{{ u.fullName }}</td>
+          <td>{{ studentCode(u) }}</td>
+          <td>
+            {{ u.fullName }}
+            <span v-if="u.isActive === false" class="text-light">(đã khóa)</span>
+          </td>
           <td>{{ u.className }}</td>
-          <td>{{ u.id }}</td>
-          <td>{{ u.password }}</td>
+          <td>{{ u.username || u.id }}</td>
+          <td>*****</td>
           <td>
             <div class="flex gap-2" style="flex-wrap: wrap">
               <button
@@ -35,14 +44,20 @@ defineEmits<{
               >
                 🔄
               </button>
-              <button class="btn btn-sm btn-primary" @click="$emit('grade', u)">📝 Chấm</button>
+              <button class="btn btn-sm btn-primary" @click="$emit('detail', u)">👁️ Chi tiết</button>
               <button
-                v-if="u.isClassStudent"
                 class="btn btn-sm btn-secondary"
-                title="Chuyển lớp"
+                :title="u.isClassStudent ? 'Chuyển lớp' : 'Thêm vào lớp'"
                 @click="$emit('move', u)"
               >
-                ⏩
+                {{ u.isClassStudent ? '⏩' : '➕' }}
+              </button>
+              <button
+                class="btn btn-sm btn-secondary"
+                title="Khóa/mở tài khoản"
+                @click="$emit('toggle', u)"
+              >
+                {{ u.isActive === false ? '🔓' : '🔒' }}
               </button>
               <button
                 class="btn btn-sm btn-danger"
@@ -55,7 +70,7 @@ defineEmits<{
           </td>
         </tr>
         <tr v-if="!students.length">
-          <td colspan="5" class="empty-state">Chưa có học sinh.</td>
+          <td colspan="6" class="empty-state">Chưa có học sinh.</td>
         </tr>
       </tbody>
     </table>

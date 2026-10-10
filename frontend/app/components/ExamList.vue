@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { Exam, ExamType } from '~/types'
 import { practiceGroups, mockGroups } from '~/utils/exams'
+import { isApiEnabled } from '~/utils/api'
 const props = defineProps<{ type: ExamType }>()
-const { data, upsert, remove, set } = useDatabase(),
+const { data, upsert, remove, set, createRemoteExam, updateRemoteExam, deleteRemoteExam, uploadRemoteRubric } =
+    useDatabase(),
   { user, isTeacher, requireTeacher } = useAuth(),
   { show } = useToast(),
   { start, openResult } = useWorkspace()
@@ -10,13 +12,26 @@ const group = ref(props.type === 'practice' ? 'doc-hieu' : 'vao-10'),
   editing = ref(false),
   edit = ref<Exam>(),
   deleting = ref<Exam | null>(null),
-  assigning = ref<Exam | null>(null)
+  assigning = ref<Exam | null>(null),
+  rubricExam = ref<Exam | null>(null)
 const table = computed(() => (props.type === 'practice' ? 'practice_exams' : 'mock_exams'))
 const exams = computed(() => data.value[table.value].filter((e) => e.targetGroup === group.value))
-function save(exam: Exam) {
+const categoryItems = computed(() => {
+  const groups = props.type === 'practice' ? practiceGroups : mockGroups
+  return groups.map((item) => ({
+    ...item,
+    count: data.value[table.value].filter((exam) => exam.targetGroup === item.id).length,
+  }))
+})
+async function save(exam: Exam, rubricFile?: File) {
   try {
     requireTeacher()
-    upsert(table.value, exam)
+    if (isApiEnabled()) {
+      const saved = edit.value
+        ? await updateRemoteExam(exam, props.type)
+        : await createRemoteExam(exam, props.type)
+      if (rubricFile) await uploadRemoteRubric(saved.id, props.type, rubricFile)
+    } else upsert(table.value, exam)
     group.value = exam.targetGroup
     editing.value = false
     show('Đã lưu đề thành công! 🌻')
@@ -24,17 +39,20 @@ function save(exam: Exam) {
     show((e as Error).message)
   }
 }
-function destroy() {
+async function destroy() {
   try {
     requireTeacher()
     if (deleting.value) {
-      remove(table.value, deleting.value.id)
-      set(
-        'assignments',
-        data.value.assignments.filter(
-          (a) => !(a.examId === deleting.value!.id && a.examType === props.type),
-        ),
-      )
+      if (isApiEnabled()) await deleteRemoteExam(deleting.value.id, props.type)
+      else {
+        remove(table.value, deleting.value.id)
+        set(
+          'assignments',
+          data.value.assignments.filter(
+            (a) => !(a.examId === deleting.value!.id && a.examType === props.type),
+          ),
+        )
+      }
     }
     deleting.value = null
   } catch (e) {
@@ -54,7 +72,7 @@ function openEditor(exam?: Exam) {
       </h2>
       <button v-if="isTeacher" class="btn btn-primary" @click="openEditor()">＋ Thêm đề mới</button>
     </div>
-    <CategoryTabs v-model="group" :items="type === 'practice' ? practiceGroups : mockGroups" />
+    <CategoryTabs v-model="group" :items="categoryItems" />
     <div class="grid">
       <ExamCard
         v-for="exam in exams"
@@ -76,6 +94,7 @@ function openEditor(exam?: Exam) {
         @assign="assigning = exam"
         @review="openResult($event)"
         @grade="openResult($event, true)"
+        @rubric="rubricExam = exam"
       />
       <p v-if="!exams.length" class="empty-state">Chưa có đề nào trong mục này.</p>
     </div>
@@ -98,6 +117,12 @@ function openEditor(exam?: Exam) {
       :exam="assigning"
       :type="type"
       @close="assigning = null"
+    />
+    <ExamRubricPanel
+      v-if="rubricExam && isTeacher"
+      :exam="rubricExam"
+      :type="type"
+      @close="rubricExam = null"
     />
   </section>
 </template>

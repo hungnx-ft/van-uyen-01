@@ -8,8 +8,14 @@ describe('exam rules retained from the HTML app', () => {
     ['practice', 'doc-hieu', 5, 4, 1500],
     ['practice', 'viet-doan', 1, 2, 2100],
     ['practice', 'viet-bai', 1, 5, 3600],
+    ['practice', 'doc-hieu-lop-6', 5, 4, 1500],
+    ['practice', 'viet-doan-lop-9', 1, 2, 2100],
+    ['practice', 'cuoi-ki-lop-8', 5, 4, 5400],
+    ['practice', 'vao-10-lop-9', 7, 10, 7200],
     ['mock', 'vao-10', 7, 10, 7200],
     ['mock', 'hsg', 7, 10, 7200],
+    ['mock', 'giua-ki-lop-6', 7, 10, 7200],
+    ['mock', 'cuoi-ki-lop-9', 7, 10, 7200],
   ])('%s / %s preserves question count, points and time', (type, group, count, points, seconds) => {
     const exam: Exam = {
       id: 'one',
@@ -44,6 +50,14 @@ describe('exam rules retained from the HTML app', () => {
     expect(clockText(7200)).toBe('120:00')
     expect(clockText(-61)).toBe('-01:01')
   })
+  it('uses a configured exam duration when provided', () => {
+    expect(duration('mock', 'vao-10', 45)).toBe(2700)
+    expect(duration('practice', 'doc-hieu', 0)).toBe(1500)
+  })
+  it('generates a configurable number of questions', () => {
+    expect(newQuestions('practice', 'doc-hieu', 8)).toHaveLength(8)
+    expect(newQuestions('mock', 'vao-10', 3)).toHaveLength(3)
+  })
 })
 
 describe('legacy browser storage', () => {
@@ -56,7 +70,18 @@ describe('legacy browser storage', () => {
   }
   it('reads and preserves legacy IDs and related records', () => {
     const s = storage()
-    s.setItem('vu_users', JSON.stringify([{ id: 'old-student', classId: 'old-class' }]))
+    s.setItem(
+      'vu_users',
+      JSON.stringify([
+        {
+          id: 'old-student',
+          classId: 'old-class',
+          role: 'student',
+          password: 'test',
+          fullName: 'Học sinh',
+        },
+      ]),
+    )
     s.setItem('vu_classes', JSON.stringify([{ id: 'old-class', name: '9A' }]))
     const db = readDatabase(s)
     expect(db.users[0]?.classId).toBe(db.classes[0]?.id)

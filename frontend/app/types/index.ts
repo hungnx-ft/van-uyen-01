@@ -1,6 +1,9 @@
 export type ExamType = 'practice' | 'mock'
 export interface User {
   id: string
+  studentCode?: string
+  /** Login name; local mode historically uses id as the login name. */
+  username?: string
   password: string
   role: 'teacher' | 'student'
   fullName: string
@@ -8,6 +11,7 @@ export interface User {
   className?: string
   schoolName?: string
   isClassStudent?: boolean
+  isActive?: boolean
 }
 export interface SchoolClass {
   id: string
@@ -27,6 +31,9 @@ export interface TheoryArticle {
   fileData?: string
 }
 export interface Question {
+  id?: string
+  /** Mock exams use this to keep questions grouped by section (1=reading, 2=writing). */
+  section?: 1 | 2
   q: string
   a: string
   score: number
@@ -37,9 +44,11 @@ export interface Exam {
   targetGroup: string
   genre?: string
   passage: string
+  durationMinutes?: number
   questions: Question[]
 }
 export interface Answer {
+  answerId?: string
   ans: string
   selfScore: number
   teacherScore: number
@@ -65,6 +74,8 @@ export interface Result {
   selfScore?: number
   teacherScore?: number
   teacherComment?: string
+  teacherImprovementNote?: string
+  feedbackPublished?: boolean
   examSnapshot?: Exam
 }
 export interface Assignment {

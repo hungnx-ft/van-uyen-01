@@ -2,13 +2,17 @@
 defineProps<{ open: boolean }>()
 const { user, isTeacher } = useAuth()
 const links = computed(() => [
-  { to: '/', label: '🏡 Trang chủ' },
+  ...(isTeacher.value
+    ? [{ to: '/analytics', label: '🏡 Trang chủ' }]
+    : [{ to: '/', label: '🏡 Trang chủ' }]),
   { to: '/theory', label: '🌿 Góc kiến thức' },
   { to: '/practice', label: '🌸 Góc luyện tập' },
   { to: '/exams', label: '🍁 Góc thi thử' },
-  isTeacher.value
-    ? { to: '/manage', label: '🍀 Góc quản lý' }
-    : { to: '/study', label: '📊 Góc học tập' },
+  ...(isTeacher.value
+    ? [
+        { to: '/manage', label: '🍀 Góc quản lý' },
+      ]
+    : [{ to: '/study', label: '📊 Góc học tập' }]),
 ])
 </script>
 <template>

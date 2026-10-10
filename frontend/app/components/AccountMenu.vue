@@ -4,9 +4,9 @@ const { user, changePassword, logout } = useAuth(),
 const open = ref(false),
   old = ref(''),
   password = ref('')
-function save() {
+async function save() {
   try {
-    changePassword(old.value, password.value)
+    await changePassword(old.value, password.value)
     old.value = ''
     password.value = ''
     show('Đổi mật khẩu thành công!')

@@ -9,10 +9,14 @@ class CRUDTheoryArticle(CRUDBase[TheoryArticle, TheoryArticleCreate, TheoryArtic
             title=obj_in.title,
             content_type=obj_in.content_type,
             content=obj_in.content,
+            main_category=obj_in.main_category,
+            sub_category=obj_in.sub_category,
+            description=obj_in.description,
+            icon=obj_in.icon,
             teacher_id=teacher_id
         )
         db.add(db_obj)
-        db.commit()
+        db.flush()
         db.refresh(db_obj)
         return db_obj
 

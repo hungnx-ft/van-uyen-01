@@ -1,11 +1,23 @@
 <script setup lang="ts">
 import type { Exam, ExamType, Result } from '~/types'
 import { duration, totalScore, questionLabel, gradeTotal, clockText } from '~/utils/exams'
+import { isApiEnabled } from '~/utils/api'
 const props = defineProps<{
     session: { exam: Exam; type: ExamType; mode: 'take' | 'review' | 'grade'; result?: Result }
   }>(),
   emit = defineEmits<{ close: [] }>()
-const { data, upsert } = useDatabase(),
+const {
+    data,
+    upsert,
+    createRemoteSubmission,
+    gradeRemoteSubmission,
+    sendRemoteAntiCheat,
+    createRemoteAIJob,
+    getRemoteAIJob,
+    getRemoteAIHistory,
+    applyRemoteAIJob,
+    saveRemoteFeedback,
+  } = useDatabase(),
   { user, requireTeacher } = useAuth(),
   { show } = useToast()
 const exam = props.session.exam,
@@ -16,15 +28,44 @@ const answers = ref(exam.questions.map(() => '')),
     props.session.result ? JSON.parse(JSON.stringify(props.session.result)) : null,
   )
 const active = computed(() => mode.value === 'take')
-useAntiCheat(active)
-const timer = useExamTimer(duration(type, exam.targetGroup), () => {
+const { tabSwitches } = useAntiCheat(active)
+const timer = useExamTimer(duration(type, exam.targetGroup, exam.durationMinutes), () => {
   if (type === 'mock') {
     show('⚠️ Đã hết thời gian thi! Hệ thống tự động thu bài.')
     submit()
   } else show('⚠️ Đã hết thời gian làm bài! Hãy hoàn thành nhanh nhất có thể nhé!')
 })
 const confirm = ref<'close' | 'submit' | null>(null),
-  busy = ref(false)
+  busy = ref(false),
+  aiBusy = ref(false),
+  aiJob = ref<{
+    id: number
+    status: string
+    provider?: string
+    model?: string
+    rubric_version?: number
+    result?: {
+      total_score?: number | null
+      overall_comment?: string | null
+      improvement_suggestion?: string | null
+      confidence?: number | null
+      answers: Array<{
+        practice_question_id?: number | null
+        mock_question_id?: number | null
+        ai_score: number
+        ai_question_comment?: string | null
+      }>
+    } | null
+  } | null>(null)
+const aiHistory = ref<Array<NonNullable<typeof aiJob.value>>>([])
+const aiPoller = ref<ReturnType<typeof setInterval> | null>(null)
+const aiProgress = computed(() => {
+  if (!aiJob.value) return 0
+  if (aiJob.value.status === 'completed') return 100
+  if (aiJob.value.status === 'failed') return 100
+  if (aiJob.value.status === 'processing') return 65
+  return 25
+})
 const isEssay = computed(() => type === 'practice' && exam.questions.length === 1)
 const title = computed(() =>
   mode.value === 'take'
@@ -44,12 +85,36 @@ const ranking = computed(() => {
 })
 onMounted(() => {
   if (mode.value === 'take') timer.start()
+  if (mode.value === 'grade' && isApiEnabled() && result.value && /^\d+$/.test(result.value.id)) {
+    getRemoteAIHistory(result.value.id)
+      .then((items) => {
+        aiHistory.value = items
+        aiJob.value = items[0] || null
+        if (aiJob.value && ['pending', 'processing'].includes(aiJob.value.status)) startAIPolling()
+      })
+      .catch(() => undefined)
+  }
 })
+onUnmounted(() => stopAIPolling())
+function stopAIPolling() {
+  if (aiPoller.value) clearInterval(aiPoller.value)
+  aiPoller.value = null
+}
+function startAIPolling() {
+  stopAIPolling()
+  aiPoller.value = setInterval(async () => {
+    if (!aiJob.value || !['pending', 'processing'].includes(aiJob.value.status)) {
+      stopAIPolling()
+      return
+    }
+    await refreshAI(true)
+  }, 2500)
+}
 function requestClose() {
   if (mode.value === 'take') confirm.value = 'close'
   else emit('close')
 }
-function submit() {
+async function submit() {
   if (mode.value !== 'take' || busy.value || !user.value) return
   busy.value = true
   try {
@@ -80,9 +145,23 @@ function submit() {
         ).length + 1,
       examSnapshot: JSON.parse(JSON.stringify(exam)),
     }
-    upsert('results', record)
+    const saved = isApiEnabled()
+      ? await createRemoteSubmission(
+          exam,
+          type,
+          answers.value,
+          record.attempt || 1,
+          record.submittedAt,
+        )
+      : record
+    if (isApiEnabled() && tabSwitches.value > 0) {
+      await Promise.all(
+        Array.from({ length: tabSwitches.value }, () => sendRemoteAntiCheat(saved.id)),
+      )
+    }
+    if (!isApiEnabled()) upsert('results', record)
     timer.stop()
-    result.value = record
+    result.value = saved
     if (type === 'practice') mode.value = 'self'
     else {
       mode.value = 'review'
@@ -96,7 +175,7 @@ function submit() {
     confirm.value = null
   }
 }
-function saveGrade() {
+async function saveGrade() {
   if (!result.value) return
   try {
     const record = JSON.parse(JSON.stringify(result.value)) as Result
@@ -107,12 +186,77 @@ function saveGrade() {
     } else {
       record.selfScore = gradeTotal(record, exam, 'selfScore')
     }
-    upsert('results', record)
+    const saved =
+      isApiEnabled() && mode.value === 'grade' ? await gradeRemoteSubmission(record, exam) : record
+    if (isApiEnabled() && mode.value === 'grade') {
+      await saveRemoteFeedback(
+        record.id,
+        record.teacherComment || '',
+        record.teacherImprovementNote || '',
+        !!record.feedbackPublished,
+      )
+    }
+    result.value = saved
+    if (!isApiEnabled() || mode.value !== 'grade') upsert('results', record)
     show(mode.value === 'grade' ? 'Đã chấm bài thành công! ✅' : 'Đã lưu điểm tự chấm! 🌸')
     emit('close')
   } catch (e) {
     show((e as Error).message)
   }
+}
+async function requestAI() {
+  if (!result.value || !isApiEnabled()) return
+  aiBusy.value = true
+  try {
+    aiJob.value = await createRemoteAIJob(result.value.id)
+    aiHistory.value = [aiJob.value, ...aiHistory.value]
+    startAIPolling()
+    show('Đã gửi bài cho AI chấm. Kết quả sẽ tự cập nhật.')
+  } catch (error) {
+    show((error as Error).message)
+  } finally {
+    aiBusy.value = false
+  }
+}
+async function refreshAI(silent = false) {
+  if (!aiJob.value) return
+  aiBusy.value = true
+  try {
+    aiJob.value = await getRemoteAIJob(aiJob.value.id)
+    aiHistory.value = aiHistory.value.map((item) =>
+      item.id === aiJob.value?.id ? aiJob.value : item,
+    )
+  } catch (error) {
+    if (!silent) show((error as Error).message)
+  } finally {
+    aiBusy.value = false
+  }
+}
+function refreshAIFromButton() {
+  refreshAI(false)
+}
+async function applyAI() {
+  if (!aiJob.value) return
+  aiBusy.value = true
+  try {
+    aiJob.value = await applyRemoteAIJob(aiJob.value.id)
+    aiHistory.value = aiHistory.value.map((item) =>
+      item.id === aiJob.value?.id ? aiJob.value : item,
+    )
+    show('Đã áp dụng điểm AI; giáo viên có thể chỉnh sửa trước khi lưu.')
+  } catch (error) {
+    show((error as Error).message)
+  } finally {
+    aiBusy.value = false
+  }
+}
+function aiForQuestion(index: number) {
+  const questionId = Number(exam.questions[index]?.id)
+  const item = aiJob.value?.result?.answers.find(
+    (answer) =>
+      (type === 'practice' ? answer.practice_question_id : answer.mock_question_id) === questionId,
+  )
+  return item ? { score: item.ai_score, comment: item.ai_question_comment } : undefined
 }
 function confirmed() {
   if (confirm.value === 'submit') submit()
@@ -126,6 +270,15 @@ function printResult() {
   window.print()
 }
 function label(i: number) {
+  const question = exam.questions[i]!
+  if (type === 'mock') {
+    const section = question.section ?? (i < 5 ? 1 : 2)
+    const sectionIndex =
+      exam.questions.slice(0, i).filter((item, index) => (item.section ?? (index < 5 ? 1 : 2)) === section)
+        .length + 1
+    const sectionLabel = section === 1 ? 'Phần I. Đọc hiểu' : 'Phần II. Viết'
+    return `${sectionLabel} - Câu ${sectionIndex} (${question.score}đ): ${question.q}`
+  }
   return isEssay.value
     ? `Yêu cầu: ${exam.passage}`
     : `${questionLabel(type, i, exam.questions[i]!.score)}: ${exam.questions[i]!.q}`
@@ -186,6 +339,9 @@ function label(i: number) {
             <template v-if="result.status === 'graded'">
               <strong>🎉 Điểm cô chấm: {{ result.teacherScore }}/{{ result.maxScore }}đ</strong>
               <p>Lời phê: {{ result.teacherComment }}</p>
+              <p v-if="result.teacherImprovementNote">
+                📌 Gợi ý cải thiện: {{ result.teacherImprovementNote }}
+              </p>
               <p>🏆 Xếp hạng: {{ ranking }}</p>
             </template>
             <template v-else>⌛ Bài làm đang chờ cô Hằng chấm để được xếp hạng.</template>
@@ -199,6 +355,7 @@ function label(i: number) {
             :practice="type === 'practice'"
             :mode="mode"
             :graded="result.status === 'graded'"
+            :ai-answer="mode === 'grade' ? aiForQuestion(i) : undefined"
           />
           <div v-if="mode === 'grade'" class="input-group">
             <label>
@@ -209,6 +366,78 @@ function label(i: number) {
                 placeholder="Bài làm tốt, cần chú ý thêm phần..."
               />
             </label>
+            <label class="mt-2">
+              Gợi ý cải thiện:
+              <textarea
+                v-model="result.teacherImprovementNote"
+                class="input-control"
+                rows="3"
+                placeholder="Học sinh cần cải thiện..."
+              />
+            </label>
+            <label class="flex items-center gap-2 mt-2">
+              <input v-model="result.feedbackPublished" type="checkbox" />
+              Công bố nhận xét cho học sinh
+            </label>
+            <div class="card mt-3" style="background: #eef4ff">
+              <div class="flex gap-2" style="flex-wrap: wrap">
+                <button class="btn btn-sm btn-secondary" :disabled="aiBusy" @click="requestAI">
+                  🤖 Yêu cầu AI chấm
+                </button>
+                <button
+                  v-if="aiJob"
+                  class="btn btn-sm btn-outline"
+                  :disabled="aiBusy"
+                  @click="refreshAIFromButton"
+                >
+                  Tải lại AI
+                </button>
+                <button
+                  v-if="aiJob?.status === 'completed'"
+                  class="btn btn-sm btn-primary"
+                  :disabled="aiBusy"
+                  @click="applyAI"
+                >
+                  Áp dụng điểm AI
+                </button>
+              </div>
+              <p v-if="aiJob" class="text-light mt-2">
+                <span v-if="['pending', 'processing'].includes(aiJob.status)" class="ai-spinner" aria-label="AI đang chấm" />
+                <strong v-if="aiJob.status === 'pending'"> AI đang xếp hàng...</strong>
+                <strong v-else-if="aiJob.status === 'processing'"> AI đang phân tích bài...</strong>
+                <strong v-else-if="aiJob.status === 'completed'"> ✅ AI đã chấm xong</strong>
+                <strong v-else-if="aiJob.status === 'failed'"> ⚠️ AI chấm lỗi</strong>
+                <div v-if="['pending', 'processing'].includes(aiJob.status)" class="ai-progress mt-2">
+                  <div class="ai-progress-bar" :style="{ width: `${aiProgress}%` }" />
+                </div>
+                AI: {{ aiJob.status }}
+                <span v-if="aiJob.result?.confidence != null">
+                  · độ tin cậy {{ Math.round(aiJob.result.confidence * 100) }}%
+                </span>
+              </p>
+              <p v-if="aiJob?.result?.overall_comment" class="mt-2">
+                {{ aiJob.result.overall_comment }}
+              </p>
+              <p v-if="aiJob?.result?.improvement_suggestion" class="text-light">
+                {{ aiJob.result.improvement_suggestion }}
+              </p>
+              <div v-if="aiHistory.length > 1" class="mt-3">
+                <strong>Lịch sử các lần chấm AI</strong>
+                <div
+                  v-for="item in aiHistory"
+                  :key="item.id"
+                  class="mt-2"
+                  style="border-top: 1px dashed var(--border-color); padding-top: 8px"
+                >
+                  <button class="btn btn-sm btn-outline" @click="aiJob = item">
+                    Lần #{{ item.id }} · {{ item.status }} · barem v{{ item.rubric_version }}
+                  </button>
+                  <span v-if="item.result?.total_score != null" class="text-light ml-2">
+                    {{ item.result.total_score }}đ
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </template>
       </div>
@@ -225,3 +454,29 @@ function label(i: number) {
     @confirm="confirmed"
   />
 </template>
+
+<style scoped>
+.ai-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #c7d2fe;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  vertical-align: -2px;
+  animation: ai-spin 0.8s linear infinite;
+}
+.ai-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dbeafe;
+}
+.ai-progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6366f1, #06b6d4);
+  transition: width 0.5s ease;
+}
+@keyframes ai-spin { to { transform: rotate(360deg); } }
+</style>

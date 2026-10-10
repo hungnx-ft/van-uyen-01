@@ -22,10 +22,12 @@ defineEmits<{ review: [result: Result]; grade: [result: Result] }>()
           <td>{{ r.status === 'graded' ? `${r.teacherScore}/${r.maxScore}` : 'Chờ chấm' }}</td>
           <td>{{ r.status === 'graded' ? 'Đã chấm' : 'Đã nộp' }}</td>
           <td>
-            <button class="btn btn-sm btn-outline" @click="$emit('review', r)">Xem bài</button>
-            <button v-if="teacher" class="btn btn-sm btn-primary" @click="$emit('grade', r)">
-              Chấm bài
-            </button>
+            <div class="result-actions">
+              <button class="btn btn-sm btn-outline" @click="$emit('review', r)">Xem bài</button>
+              <button v-if="teacher" class="btn btn-sm btn-primary" @click="$emit('grade', r)">
+                Chấm bài
+              </button>
+            </div>
           </td>
         </tr>
         <tr v-if="!results.length">
@@ -37,3 +39,12 @@ defineEmits<{ review: [result: Result]; grade: [result: Result] }>()
     </table>
   </div>
 </template>
+
+<style scoped>
+.result-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+</style>

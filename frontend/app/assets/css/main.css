@@ -514,6 +514,11 @@ textarea.input-control {
   border-color: var(--secondary);
   color: var(--primary);
 }
+.tab-count {
+  font-size: 0.85em;
+  opacity: 0.8;
+  white-space: nowrap;
+}
 
 /* DASHBOARD */
 .stat-grid {
@@ -572,10 +577,13 @@ textarea.input-control {
 }
 .leaderboard-table tr {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-  transition: transform 0.2s;
+  transition: background-color 0.2s;
 }
 .leaderboard-table tr:hover {
-  transform: scale(1.01);
+  transform: none;
+}
+.leaderboard-table tr:hover td {
+  background-color: #fffafd;
 }
 
 /* WORKSPACE (BÀI LÀM / ĐỌC HIỂU) */
@@ -806,7 +814,7 @@ textarea.input-control {
   font-size: 0.9rem;
   color: var(--text-light);
   cursor: pointer;
-  text-decoration: underline;
+  text-decoration: none;
   font-weight: 600;
 }
 .toggle-login:hover {
@@ -948,6 +956,8 @@ textarea.input-control {
   }
   .main-content {
     margin-left: 0;
+    min-width: 0;
+    width: 100%;
   }
   .mobile-header {
     display: flex;
@@ -966,6 +976,13 @@ textarea.input-control {
   }
   .panel {
     padding: 20px;
+    min-width: 0;
+  }
+  .grid,
+  .grid.cols-4,
+  .grid.cols-3 {
+    grid-template-columns: 1fr;
+    min-width: 0;
   }
   .grading-grid.cols-4,
   .grading-grid.cols-3 {

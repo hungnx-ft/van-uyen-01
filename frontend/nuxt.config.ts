@@ -2,6 +2,13 @@ export default defineNuxtConfig({
   ssr: false,
   compatibilityDate: '2026-09-05',
   devtools: { enabled: false },
+  runtimeConfig: {
+    public: {
+      // This value is embedded into the SPA bundle during `nuxt build`.
+      // An empty default keeps the offline LocalStorage mode available.
+      apiBase: import.meta.env.NUXT_PUBLIC_API_BASE || '',
+    },
+  },
   css: ['~/assets/css/main.css'],
   app: {
     head: {

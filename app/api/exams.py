@@ -1,14 +1,48 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.schemas.exam import PracticeExamCreate, PracticeExamResponse, MockExamCreate, MockExamResponse
-from app.services.exam import create_practice_exam, create_mock_exam
+from app.services.exam import create_practice_exam, create_mock_exam, delete_exam, update_mock_exam, update_practice_exam
 from app.repositories.exam import practice_exam_repo, mock_exam_repo
 from app.dependencies.auth import get_current_teacher, get_current_user
 from app.models.user import User
+from app.models.exam import PracticeExam, MockExam
+from app.dependencies.permissions import visible_content
+from app.schemas.rubric import RubricResponse, RubricTextUpdate
+from app.services.rubric import delete_rubric, latest_rubric, owned_exam, update_rubric_text, upload_rubric
 
 router = APIRouter()
+
+
+@router.post("/{exam_type}/{exam_id}/rubric", response_model=RubricResponse)
+def upload_exam_rubric(exam_type: str, exam_id: int, file: UploadFile = File(...),
+                       db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
+    return upload_rubric(db, exam_type, exam_id, current_user.id, file)
+
+
+@router.get("/{exam_type}/{exam_id}/rubric", response_model=RubricResponse)
+def read_exam_rubric(exam_type: str, exam_id: int, db: Session = Depends(get_db),
+                     current_user: User = Depends(get_current_teacher)):
+    normalized = exam_type.strip().title()
+    owned_exam(db, normalized, exam_id, current_user.id)
+    rubric = latest_rubric(db, normalized, exam_id, current_user.id)
+    if rubric is None:
+        raise HTTPException(404, "Rubric not found")
+    return rubric
+
+
+@router.put("/{exam_type}/{exam_id}/rubric", response_model=RubricResponse)
+def edit_exam_rubric(exam_type: str, exam_id: int, request: RubricTextUpdate,
+                     db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
+    return update_rubric_text(db, exam_type, exam_id, current_user.id, request.content_text)
+
+
+@router.delete("/{exam_type}/{exam_id}/rubric", status_code=204)
+def remove_exam_rubric(exam_type: str, exam_id: int, db: Session = Depends(get_db),
+                       current_user: User = Depends(get_current_teacher)):
+    delete_rubric(db, exam_type, exam_id, current_user.id)
+    return Response(status_code=204)
 
 @router.post("/practice", response_model=PracticeExamResponse)
 def create_new_practice_exam(
@@ -28,7 +62,7 @@ def read_practice_exams(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return practice_exam_repo.get_multi(db, skip=skip, limit=limit)
+    return visible_content(db, PracticeExam, current_user).offset(max(skip, 0)).limit(min(max(limit, 1), 100)).all()
 
 @router.post("/mock", response_model=MockExamResponse)
 def create_new_mock_exam(
@@ -48,4 +82,26 @@ def read_mock_exams(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return mock_exam_repo.get_multi(db, skip=skip, limit=limit)
+    return visible_content(db, MockExam, current_user).offset(max(skip, 0)).limit(min(max(limit, 1), 100)).all()
+
+
+@router.put("/practice/{exam_id}", response_model=PracticeExamResponse)
+def edit_practice_exam(exam_id: int, exam_in: PracticeExamCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
+    return update_practice_exam(db, exam_id, exam_in, current_user.id)
+
+
+@router.put("/mock/{exam_id}", response_model=MockExamResponse)
+def edit_mock_exam(exam_id: int, exam_in: MockExamCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
+    return update_mock_exam(db, exam_id, exam_in, current_user.id)
+
+
+@router.delete("/practice/{exam_id}", status_code=204)
+def remove_practice_exam(exam_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
+    delete_exam(db, "Practice", exam_id, current_user.id)
+    return Response(status_code=204)
+
+
+@router.delete("/mock/{exam_id}", status_code=204)
+def remove_mock_exam(exam_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
+    delete_exam(db, "Mock", exam_id, current_user.id)
+    return Response(status_code=204)

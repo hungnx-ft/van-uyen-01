@@ -1,23 +1,26 @@
 <script setup lang="ts">
 import type { Exam, ExamType } from '~/types'
+import { isApiEnabled } from '~/utils/api'
 const props = defineProps<{ exam: Exam; type: ExamType }>(),
   emit = defineEmits<{ close: [] }>()
-const { data, upsert } = useDatabase(),
+const { data, upsert, createRemoteAssignment } = useDatabase(),
   { requireTeacher } = useAuth(),
   { show } = useToast(),
   classId = ref(data.value.classes[0]?.id || '')
-function submit() {
+async function submit() {
   try {
     requireTeacher()
     if (!classId.value) return
-    upsert('assignments', {
-      id: crypto.randomUUID(),
-      examId: props.exam.id,
-      examType: props.type,
-      classId: classId.value,
-      createdAt: Date.now(),
-      examTitle: props.exam.title,
-    })
+    if (isApiEnabled()) await createRemoteAssignment(props.exam, props.type, classId.value)
+    else
+      upsert('assignments', {
+        id: crypto.randomUUID(),
+        examId: props.exam.id,
+        examType: props.type,
+        classId: classId.value,
+        createdAt: Date.now(),
+        examTitle: props.exam.title,
+      })
     show('Đã giao đề thành công! ✅')
     emit('close')
   } catch (e) {

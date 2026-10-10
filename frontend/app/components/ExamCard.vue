@@ -9,6 +9,7 @@ const emit = defineEmits<{
   assign: []
   review: [result: Result]
   grade: [result: Result]
+  rubric: []
 }>()
 const menu = ref(false),
   pending = computed(() => props.results.filter((r) => r.status === 'pending'))
@@ -23,6 +24,10 @@ function choose(action: 'edit' | 'remove' | 'assign') {
   if (action === 'edit') emit('edit')
   else if (action === 'remove') emit('remove')
   else emit('assign')
+}
+function openRubric() {
+  menu.value = false
+  emit('rubric')
 }
 </script>
 <template>
@@ -44,6 +49,9 @@ function choose(action: 'edit' | 'remove' | 'assign') {
         </button>
         <div v-if="menu" class="card dropdown" style="min-width: 130px">
           <button class="btn btn-sm btn-outline w-full mb-1" @click="choose('edit')">Sửa đề</button>
+          <button class="btn btn-sm btn-secondary w-full mb-1" @click="openRubric">
+            Barem chấm
+          </button>
           <button class="btn btn-sm btn-danger w-full mb-1" @click="choose('remove')">
             Xóa đề
           </button>
