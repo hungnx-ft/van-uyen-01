@@ -2,6 +2,8 @@
 
 Nền tảng học tập và kiểm tra môn Ngữ văn: học sinh đọc kiến thức, luyện đề, thi thử; giáo viên quản lý lớp, soạn đề, giao bài, chấm bài (có hỗ trợ chấm bằng AI) và theo dõi kết quả.
 
+**Production:** https://nguvancohang.com (API: `https://nguvancohang.com/api/v1`). Server deploy từ branch `main`, xem [`DEPLOY_SERVER_VI.md`](DEPLOY_SERVER_VI.md).
+
 ## Kiến trúc
 
 ```text

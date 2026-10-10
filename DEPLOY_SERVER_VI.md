@@ -5,12 +5,13 @@ Tài liệu này triển khai phiên bản hiện tại của dự án gồm:
 - Frontend Nuxt 4/Vue 3 được build thành static SPA và phục vụ trực tiếp bởi Nginx.
 - Backend FastAPI chạy bằng Uvicorn dưới `systemd` tại `127.0.0.1:8000`.
 - PostgreSQL cài trực tiếp trên máy chủ.
-- Địa chỉ public: `https://hungnguyenxuan.info/vanuyen/`.
-- API public: `https://hungnguyenxuan.info/vanuyen/api/v1`.
+- Địa chỉ public: `https://nguvancohang.com/` (`www.nguvancohang.com` tự chuyển về domain chính).
+- API public: `https://nguvancohang.com/api/v1`.
+- Domain cũ `vanuyen.hungnguyenxuan.info` chỉ còn redirect 301 sang `nguvancohang.com` (giữ nguyên path).
 
 Các lệnh bên dưới dành cho Ubuntu/Debian và cần tài khoản có quyền `sudo`. Nếu server dùng AlmaLinux/Rocky Linux, thay `apt` bằng `dnf`; phần cấu hình ứng dụng, systemd và Nginx giữ nguyên.
 
-> Không ghi đè toàn bộ virtual host đang chạy của `hungnguyenxuan.info`. Phần Nginx bên dưới được thiết kế để chèn thêm vào `server { ... }` hiện hữu, nhờ đó website đang chạy ở `/` không bị ảnh hưởng.
+> Ứng dụng có virtual host Nginx riêng (`/etc/nginx/sites-available/nguvancohang.com`) và chạy ở gốc `/` của domain. Các site khác trên cùng server (ví dụ `manage.hungnguyenxuan.info`) không bị ảnh hưởng.
 
 ## 1. Kiến trúc sau khi triển khai
 
@@ -19,9 +20,9 @@ Trình duyệt
    |
    | HTTPS :443
    v
-Nginx (hungnguyenxuan.info)
-   |-- /vanuyen/          -> /var/www/vanuyen (frontend static)
-   `-- /vanuyen/api/...   -> 127.0.0.1:8000/api/... (FastAPI)
+Nginx (nguvancohang.com)
+   |-- /                  -> /var/www/vanuyen-root (frontend static)
+   `-- /api/...           -> 127.0.0.1:8000/api/... (FastAPI)
                                   |
                                   `-> PostgreSQL localhost:5432
 ```
@@ -30,19 +31,17 @@ Chỉ cổng 80/443 mở ra Internet. Không mở cổng 3000, 8000 hoặc 5432.
 
 ## 2. Chuẩn bị DNS và kiểm tra server
 
-Tại nơi quản lý DNS, tạo hoặc kiểm tra bản ghi:
+Tại nơi quản lý DNS của `nguvancohang.com` (hiện là Tenten), tạo hoặc kiểm tra bản ghi:
 
 ```text
-Type: A
-Name: @
-Value: IP_PUBLIC_CUA_SERVER
+Type: A      Name: @     Value: IP_PUBLIC_CUA_SERVER
+Type: CNAME  Name: www   Value: nguvancohang.com
 ```
 
 Nếu dùng Cloudflare, có thể tạm để `DNS only` lúc cấp chứng chỉ lần đầu. Kiểm tra DNS đã trỏ đúng:
 
 ```bash
-getent hosts hungnguyenxuan.info
-curl -I http://hungnguyenxuan.info
+getent hosts nguvancohang.com www.nguvancohang.com
 ```
 
 Cập nhật hệ thống và cài các gói cần thiết:
@@ -84,16 +83,16 @@ sudo useradd --system --create-home --home-dir /opt/van-uyen \
   --shell /usr/sbin/nologin vanuyen
 ```
 
-Clone đúng repository và branch đang chứa frontend/backend mới:
+Clone repository, branch production là `main`:
 
 ```bash
-sudo -u vanuyen git clone --branch feature/new_frontend \
-  https://github.com/thanh-hang-204/van-uyen.git /opt/van-uyen/app
+sudo -u vanuyen git clone --branch main \
+  https://github.com/hungnx-ft/van-uyen-01.git /opt/van-uyen/app
 cd /opt/van-uyen/app
 git rev-parse --short HEAD
 ```
 
-Nếu code production đã được merge sang branch khác, thay `feature/new_frontend` bằng tên branch/tag cần triển khai. Không triển khai file `index.html` cũ ở thư mục gốc.
+Mọi thay đổi đi qua Pull Request vào `main`; server luôn deploy từ `main`. Toàn bộ file trong `/opt/van-uyen/app` (trừ `.env`) phải thuộc user `vanuyen`. Đừng chạy `git` hay `npm` bằng root trong thư mục này, nếu không lần cập nhật sau sẽ lỗi quyền. Không triển khai file `index.html` cũ ở thư mục gốc.
 
 ## 5. Tạo PostgreSQL database
 
@@ -168,7 +167,7 @@ ENVIRONMENT=production
 SECRET_KEY=SECRET_NGAU_NHIEN_VUA_TAO
 AI_KEY_ENCRYPTION_KEY=KHOA_FERNET_VUA_TAO
 DATABASE_URL=postgresql://vanuyen_app:MAT_KHAU_DB_VUA_TAO@127.0.0.1:5432/vanuyen_db
-CORS_ORIGINS=["https://hungnguyenxuan.info"]
+CORS_ORIGINS=["https://nguvancohang.com","https://www.nguvancohang.com"]
 UPLOAD_DIR=/opt/van-uyen/data/uploads
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
@@ -176,7 +175,7 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 
 `AI_KEY_ENCRYPTION_KEY` mã hóa API key AI, tạo bằng `.venv/bin/python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Có thể để trống nếu chưa dùng AI.
 
-Lưu ý: CORS dùng **origin**, vì vậy không thêm `/vanuyen` vào `CORS_ORIGINS`. Không commit `.env` lên Git và không dùng secret mẫu trong source.
+Lưu ý: CORS dùng **origin** (scheme + hostname), không có path hay dấu `/` cuối. Không commit `.env` lên Git và không dùng secret mẫu trong source.
 
 Tạo thư mục dữ liệu, chạy migration:
 
@@ -250,122 +249,157 @@ Kết quả `/health/ready` phải chứa `"database":"ok"`. Xem log khi có l�
 sudo journalctl -u vanuyen-api -n 100 --no-pager
 ```
 
-## 9. Build frontend cho subpath `/vanuyen`
+## 9. Build frontend
 
-Hai biến sau bắt buộc được đặt **ngay lúc build**:
+Biến sau bắt buộc được đặt **ngay lúc build** (giá trị được nhúng vào bundle):
 
-- `NUXT_APP_BASE_URL=/vanuyen/`: asset và Vue Router dùng đúng subpath.
-- `NUXT_PUBLIC_API_BASE=/vanuyen/api/v1`: frontend gọi API qua cùng domain/Nginx.
+- `NUXT_PUBLIC_API_BASE=/api/v1`: frontend gọi API qua cùng domain/Nginx.
+
+URL tuyệt đối dùng cho thẻ Open Graph (ảnh/tiêu đề khi share link lên Facebook, Zalo...) mặc định là `https://nguvancohang.com`. Chỉ cần đặt thêm `NUXT_PUBLIC_SITE_URL` khi build cho domain khác.
 
 Build và phát hành:
 
 ```bash
 cd /opt/van-uyen/app/frontend
 sudo -u vanuyen npm ci
-sudo -u vanuyen env \
-  NUXT_APP_BASE_URL=/vanuyen/ \
-  NUXT_PUBLIC_API_BASE=/vanuyen/api/v1 \
-  npm run generate
+sudo -u vanuyen env NUXT_PUBLIC_API_BASE=/api/v1 npm run generate
 
-sudo install -d -o root -g www-data -m 755 /var/www/vanuyen
-sudo cp -a .output/public/. /var/www/vanuyen/
-sudo chown -R root:www-data /var/www/vanuyen
-sudo find /var/www/vanuyen -type d -exec chmod 755 {} \;
-sudo find /var/www/vanuyen -type f -exec chmod 644 {} \;
+sudo install -d -o root -g www-data -m 755 /var/www/vanuyen-root
+sudo rsync -a --delete .output/public/ /var/www/vanuyen-root/
+sudo chown -R root:www-data /var/www/vanuyen-root
 ```
 
 Kiểm tra nhanh giá trị đã được nhúng vào bundle:
 
 ```bash
-grep -R "/vanuyen/api/v1" /var/www/vanuyen/_nuxt | head
-test -f /var/www/vanuyen/index.html && echo "Frontend build OK"
+grep -o 'apiBase:"[^"]*"' /var/www/vanuyen-root/index.html   # apiBase:"/api/v1"
+grep -c 'og:image' /var/www/vanuyen-root/index.html
 ```
 
 Không dùng `npm run dev` hoặc `npm run preview` trong production.
 
-## 10. Cấu hình Nginx
+## 10. Cấu hình Nginx và HTTPS
 
-Tìm virtual host đang phục vụ domain:
+### 10.1. Virtual host HTTP để cấp chứng chỉ
 
-```bash
-sudo nginx -T | grep -n "server_name.*hungnguyenxuan.info"
-```
-
-Mở file tương ứng trong `/etc/nginx/sites-available/`. Chèn các `location` sau **bên trong cả server HTTPS đang có** (hoặc server HTTP trước khi cài SSL):
+Tạo `/etc/nginx/sites-available/nguvancohang.com`:
 
 ```nginx
-# Chuẩn hóa URL để relative path luôn đúng.
-location = /vanuyen {
-    return 301 /vanuyen/;
-}
+server {
+    listen 80;
+    listen [::]:80;
+    server_name nguvancohang.com www.nguvancohang.com;
 
-# API phải đặt trước location frontend.
-location ^~ /vanuyen/api/ {
-    proxy_pass http://127.0.0.1:8000/api/;
-    proxy_http_version 1.1;
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/letsencrypt;
+    }
 
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-
-    client_max_body_size 6m;
-    proxy_connect_timeout 10s;
-    proxy_read_timeout 120s;
-}
-
-# Frontend SPA. Fallback index.html giúp refresh /login, /study... không bị 404.
-location /vanuyen/ {
-    root /var/www;
-    try_files $uri $uri/ /vanuyen/index.html;
-}
-
-# Asset có hash có thể cache lâu.
-location ^~ /vanuyen/_nuxt/ {
-    root /var/www;
-    access_log off;
-    expires 1y;
-    add_header Cache-Control "public, immutable";
+    location / {
+        return 301 https://nguvancohang.com$request_uri;
+    }
 }
 ```
 
-Không đặt `location /vanuyen/` bên trong một `location` khác. Nếu cấu hình cũ có regex/location bắt mọi request, kiểm tra `nginx -T` để chắc chắn các block trên được ưu tiên.
+Bật site và cấp chứng chỉ Let's Encrypt bằng webroot:
 
-Kiểm tra rồi reload an toàn:
+```bash
+sudo install -d -m 755 /var/www/letsencrypt
+sudo ln -s /etc/nginx/sites-available/nguvancohang.com /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+sudo certbot certonly --webroot -w /var/www/letsencrypt \
+  -d nguvancohang.com -d www.nguvancohang.com
+```
+
+### 10.2. Virtual host HTTPS
+
+Nối thêm vào cùng file:
+
+```nginx
+# www -> domain chính
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name www.nguvancohang.com;
+
+    ssl_certificate /etc/letsencrypt/live/nguvancohang.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/nguvancohang.com/privkey.pem;
+
+    return 301 https://nguvancohang.com$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name nguvancohang.com;
+
+    ssl_certificate /etc/letsencrypt/live/nguvancohang.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/nguvancohang.com/privkey.pem;
+
+    root /var/www/vanuyen-root;
+    index index.html;
+
+    client_max_body_size 6M;
+
+    # API phải đặt trước location frontend.
+    location ^~ /api/ {
+        proxy_pass http://127.0.0.1:8000/api/;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        client_max_body_size 6m;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 120s;
+    }
+
+    # Asset có hash có thể cache lâu.
+    location ^~ /_nuxt/ {
+        access_log off;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Frontend SPA. Fallback index.html giúp refresh /login, /study... không bị 404.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~ \.php$ {
+        return 404;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+}
+```
+
+Kiểm tra rồi reload:
 
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
+sudo certbot renew --dry-run --no-random-sleep-on-renew --cert-name nguvancohang.com
 ```
 
-Kiểm tra HTTP/local routing:
+### 10.3. Domain cũ
+
+`/etc/nginx/sites-available/vanuyen.hungnguyenxuan.info` chỉ còn redirect 301 sang `https://nguvancohang.com$request_uri` (cả HTTP lẫn HTTPS), và giữ `location ^~ /.well-known/acme-challenge/ { root /var/www/vanuyen; }` ở block port 80 để chứng chỉ cũ vẫn tự gia hạn. Khi không cần domain cũ nữa, xóa site này và chạy `sudo certbot delete --cert-name vanuyen.hungnguyenxuan.info`.
+
+## 11. Kiểm tra sau khi cài
 
 ```bash
-curl -I http://hungnguyenxuan.info/vanuyen/
-curl -fsS http://hungnguyenxuan.info/vanuyen/api/v1/openapi.json | head -c 100
-```
-
-## 11. Cấp HTTPS bằng Let's Encrypt
-
-Nếu `hungnguyenxuan.info` đã có HTTPS hợp lệ thì bỏ qua phần cài chứng chỉ, nhưng vẫn phải thêm các location vào block `listen 443 ssl`.
-
-Nếu chưa có:
-
-```bash
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d hungnguyenxuan.info
-sudo certbot renew --dry-run
-```
-
-Sau đó xác minh:
-
-```bash
-curl -I https://hungnguyenxuan.info/vanuyen/
-curl -fsS https://hungnguyenxuan.info/vanuyen/api/v1/openapi.json | head -c 100
+curl -I https://nguvancohang.com/
+curl -fsS https://nguvancohang.com/api/v1/openapi.json | head -c 100
+curl -I https://www.nguvancohang.com/          # 301 -> https://nguvancohang.com/
 systemctl list-timers | grep certbot
 ```
 
-Mở trình duyệt tại `https://hungnguyenxuan.info/vanuyen/`, đăng nhập giáo viên và thử tạo lớp/tài khoản học sinh.
+Mở trình duyệt tại `https://nguvancohang.com/`, đăng nhập giáo viên và thử tạo lớp/tài khoản học sinh.
 
 ## 12. Firewall tối thiểu
 
@@ -387,7 +421,8 @@ Trước khi cập nhật, backup database theo mục 14. Sau đó:
 ```bash
 cd /opt/van-uyen/app
 sudo -u vanuyen git fetch origin
-sudo -u vanuyen git pull --ff-only origin feature/new_frontend
+sudo -u vanuyen git checkout main
+sudo -u vanuyen git pull --ff-only origin main
 
 sudo -u vanuyen .venv/bin/pip install \
   --no-index \
@@ -397,14 +432,11 @@ sudo -u vanuyen .venv/bin/alembic upgrade head
 
 cd /opt/van-uyen/app/frontend
 sudo -u vanuyen npm ci
-sudo -u vanuyen env \
-  NUXT_APP_BASE_URL=/vanuyen/ \
-  NUXT_PUBLIC_API_BASE=/vanuyen/api/v1 \
-  npm run generate
+sudo -u vanuyen env NUXT_PUBLIC_API_BASE=/api/v1 npm run generate
 
-sudo cp -a .output/public/. /var/www/vanuyen/
-sudo chown -R root:www-data /var/www/vanuyen
-sudo systemctl restart vanuyen-api
+sudo rsync -a --delete .output/public/ /var/www/vanuyen-root/
+sudo chown -R root:www-data /var/www/vanuyen-root
+sudo systemctl restart vanuyen-api vanuyen-ai-worker
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -413,12 +445,12 @@ Kiểm tra sau deploy:
 
 ```bash
 curl -fsS http://127.0.0.1:8000/health/ready
-curl -fsS https://hungnguyenxuan.info/vanuyen/api/v1/openapi.json >/dev/null
-curl -fsS https://hungnguyenxuan.info/vanuyen/ >/dev/null
-sudo systemctl --no-pager --full status vanuyen-api
+curl -fsS https://nguvancohang.com/api/v1/openapi.json >/dev/null
+curl -fsS https://nguvancohang.com/ >/dev/null
+sudo systemctl --no-pager --full status vanuyen-api vanuyen-ai-worker
 ```
 
-Nếu đổi branch production, thay tên branch ở cả bước clone và update.
+Nếu chỉ thay đổi frontend thì không cần restart service; nếu chỉ thay đổi backend thì có thể bỏ bước build frontend.
 
 ## 14. Backup và khôi phục
 
@@ -469,9 +501,9 @@ sudo -u postgres psql -d vanuyen_db -c 'SELECT now();'
 
 ### Trang trắng hoặc asset `_nuxt` bị 404
 
-- Xem source HTML/Network và kiểm tra asset bắt đầu bằng `/vanuyen/_nuxt/`.
-- Build lại với `NUXT_APP_BASE_URL=/vanuyen/`.
-- Kiểm tra file tồn tại dưới `/var/www/vanuyen/_nuxt/`.
+- Xem source HTML/Network và kiểm tra asset bắt đầu bằng `/_nuxt/`.
+- Đảm bảo **không** đặt `NUXT_APP_BASE_URL` lúc build (ứng dụng chạy ở gốc domain).
+- Kiểm tra file tồn tại dưới `/var/www/vanuyen-root/_nuxt/`.
 - Chạy `sudo nginx -t` và xem cấu hình thực tế bằng `sudo nginx -T`.
 
 ### Frontend báo “Backend API chưa được cấu hình”
@@ -479,9 +511,7 @@ sudo -u postgres psql -d vanuyen_db -c 'SELECT now();'
 Biến API chưa được nhúng lúc build. Build lại với:
 
 ```bash
-NUXT_APP_BASE_URL=/vanuyen/ \
-NUXT_PUBLIC_API_BASE=/vanuyen/api/v1 \
-npm run generate
+NUXT_PUBLIC_API_BASE=/api/v1 npm run generate
 ```
 
 Sau đó copy lại `.output/public` và hard refresh trình duyệt.
@@ -501,12 +531,12 @@ Thường do `.env` sai, PostgreSQL chưa chạy, migration chưa chạy hoặc 
 Kiểm tra chính xác cặp cấu hình:
 
 ```nginx
-location ^~ /vanuyen/api/ {
+location ^~ /api/ {
     proxy_pass http://127.0.0.1:8000/api/;
 }
 ```
 
-Dấu `/` cuối của cả `location` và `proxy_pass` là có chủ đích: Nginx đổi `/vanuyen/api/v1/...` thành `/api/v1/...` trước khi gửi FastAPI.
+Block này phải nằm trong `server` của `nguvancohang.com` (port 443) và đứng trước `location /`.
 
 ### Service báo lỗi SECRET_KEY
 
@@ -521,18 +551,22 @@ sudo systemctl restart vanuyen-api
 Giá trị đúng là:
 
 ```dotenv
-CORS_ORIGINS=["https://hungnguyenxuan.info"]
+CORS_ORIGINS=["https://nguvancohang.com","https://www.nguvancohang.com"]
 ```
 
-Không thêm dấu `/` cuối và không thêm `/vanuyen` vì origin chỉ gồm scheme + hostname + port.
+Không thêm dấu `/` cuối vì origin chỉ gồm scheme + hostname + port. Sửa xong thì `sudo systemctl restart vanuyen-api`.
+
+### Share link lên Facebook không hiện ảnh/tiêu đề mới
+
+Facebook cache bản preview cũ. Mở https://developers.facebook.com/tools/debug/, dán `https://nguvancohang.com` rồi bấm **Scrape Again**.
 
 ## 16. Checklist nghiệm thu
 
-- [ ] DNS của `hungnguyenxuan.info` trỏ đúng IP server.
-- [ ] `https://hungnguyenxuan.info/vanuyen/` trả HTTP 200.
-- [ ] Refresh trực tiếp `/vanuyen/login`, `/vanuyen/study` không bị Nginx 404.
-- [ ] Asset tải từ `/vanuyen/_nuxt/`, không phải `/_nuxt/`.
-- [ ] `/vanuyen/api/v1/openapi.json` trả JSON.
+- [ ] DNS của `nguvancohang.com` và `www.nguvancohang.com` trỏ đúng IP server.
+- [ ] `https://nguvancohang.com/` trả HTTP 200; `www` và `http://` redirect 301 về `https://nguvancohang.com/`.
+- [ ] Refresh trực tiếp `/login`, `/study` không bị Nginx 404.
+- [ ] `/api/v1/openapi.json` trả JSON.
+- [ ] Share link lên Facebook hiện ảnh và tiêu đề (kiểm tra bằng Sharing Debugger).
 - [ ] `/health/ready` local báo database `ok`.
 - [ ] Đăng nhập giáo viên thành công.
 - [ ] Tạo lớp, học sinh, đề, giao đề, nộp bài và chấm bài hoạt động.
