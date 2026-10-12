@@ -32,6 +32,8 @@ def live():
 
 
 @app.get("/health/ready")
+# Same check under the API prefix so the public /health page can reach it via Nginx.
+@app.get(f"{settings.API_V1_STR}/health")
 def ready(db: Session = Depends(get_db)):
     try:
         db.execute(text("SELECT 1"))

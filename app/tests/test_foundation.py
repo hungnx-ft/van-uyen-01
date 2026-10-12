@@ -51,6 +51,7 @@ def test_cli_creates_teacher_without_overwriting_existing_account(db_engine, db)
 def test_cors_and_health(client):
     assert client.get("/health/live").json() == {"status": "ok"}
     assert client.get("/health/ready").status_code == 200
+    assert client.get("/api/v1/health").json() == {"status": "ok", "database": "ok"}
     for origin, allowed in (("http://localhost:3000", True), ("https://untrusted.example", False)):
         response = client.options("/api/v1/auth/login", headers={"Origin": origin, "Access-Control-Request-Method": "POST"})
         assert (response.headers.get("access-control-allow-origin") == origin) is allowed
@@ -66,6 +67,7 @@ def test_readiness_returns_503_without_database_details(client):
         response = client.get("/health/ready")
         assert response.status_code == 503
         assert "hidden" not in response.text and "SELECT" not in response.text
+        assert client.get("/api/v1/health").status_code == 503
         assert client.get("/health/live").status_code == 200
     finally:
         if previous is None:

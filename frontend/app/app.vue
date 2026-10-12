@@ -5,6 +5,8 @@ const { ready, error, initialize, refresh } = useDatabase(),
 const route = useRoute(),
   { state, close } = useWorkspace()
 const mounted = ref(false)
+// The status page must load without storage or a session, so it skips the app shell.
+const statusPage = computed(() => route.path.replace(/\/$/, '') === '/health')
 function retry() {
   initialize()
   if (ready.value) restore()
@@ -28,7 +30,7 @@ onMounted(() => {
 onUnmounted(() => window.removeEventListener('storage', syncStorage))
 watch([() => user.value?.id, () => user.value?.role], () => close())
 watchEffect(() => {
-  if (!mounted.value || !ready.value || !authReady.value) return
+  if (statusPage.value || !mounted.value || !ready.value || !authReady.value) return
   const authPage = ['/login', '/register'].includes(route.path)
   if (!user.value && !authPage) navigateTo('/login')
   else if (user.value && authPage) navigateTo('/')
@@ -36,7 +38,8 @@ watchEffect(() => {
 })
 </script>
 <template>
-  <StorageError v-if="error" :message="error" @retry="retry" />
+  <NuxtPage v-if="statusPage" />
+  <StorageError v-else-if="error" :message="error" @retry="retry" />
   <template v-else-if="mounted && ready && authReady">
     <AppShell v-if="user"><NuxtPage /></AppShell>
     <NuxtPage v-else />
