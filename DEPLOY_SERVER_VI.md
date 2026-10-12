@@ -92,7 +92,7 @@ cd /opt/van-uyen/app
 git rev-parse --short HEAD
 ```
 
-Mọi thay đổi đi qua Pull Request vào `main`; server luôn deploy từ `main`. Toàn bộ file trong `/opt/van-uyen/app` (trừ `.env`) phải thuộc user `vanuyen`. Đừng chạy `git` hay `npm` bằng root trong thư mục này, nếu không lần cập nhật sau sẽ lỗi quyền. Không triển khai file `index.html` cũ ở thư mục gốc.
+Mọi thay đổi đi qua Pull Request vào `main`; server luôn deploy từ `main`. Toàn bộ file trong `/opt/van-uyen/app` (trừ `.env`) phải thuộc user `vanuyen`. Đừng chạy `git` hay `npm` bằng root trong thư mục này, nếu không lần cập nhật sau sẽ lỗi quyền. Code ứng dụng nằm trong `/opt/van-uyen/app/app` (thư mục `app/` của repo); `.venv` và `.env` đặt ở `/opt/van-uyen/app`. Không triển khai file `index.html` cũ.
 
 ## 5. Tạo PostgreSQL database
 
@@ -133,15 +133,15 @@ Tạo virtual environment, kiểm tra archive và cài dependency offline:
 ```bash
 cd /opt/van-uyen/app
 sudo -u vanuyen python3 -m venv .venv
-cd vendor
+cd app/vendor
 sha256sum -c SHA256SUMS
 sudo -u vanuyen tar -xzf python-wheels-linux-x86_64-py312.tar.gz \
-  -C /opt/van-uyen/app/vendor
+  -C /opt/van-uyen/app/app/vendor
 cd /opt/van-uyen/app
 sudo -u vanuyen .venv/bin/pip install \
   --no-index \
-  --find-links vendor/vanuyen-wheelhouse \
-  -r requirements.txt
+  --find-links app/vendor/vanuyen-wheelhouse \
+  -r app/requirements.txt
 sudo -u vanuyen .venv/bin/pip check
 ```
 
@@ -157,6 +157,7 @@ Tạo file cấu hình bằng editor:
 
 ```bash
 sudo install -o root -g vanuyen -m 640 /dev/null /opt/van-uyen/app/.env
+sudo ln -s ../.env /opt/van-uyen/app/app/.env   # backend đọc .env từ thư mục làm việc
 sudo nano /opt/van-uyen/app/.env
 ```
 
@@ -181,9 +182,9 @@ Tạo thư mục dữ liệu, chạy migration:
 
 ```bash
 sudo install -d -o vanuyen -g vanuyen -m 750 /opt/van-uyen/data/uploads
-cd /opt/van-uyen/app
-sudo -u vanuyen .venv/bin/alembic upgrade head
-sudo -u vanuyen .venv/bin/alembic current
+cd /opt/van-uyen/app/app
+sudo -u vanuyen ../.venv/bin/alembic upgrade head
+sudo -u vanuyen ../.venv/bin/alembic current
 ```
 
 ## 7. Tạo tài khoản giáo viên đầu tiên
@@ -191,8 +192,8 @@ sudo -u vanuyen .venv/bin/alembic current
 Chạy CLI có sẵn của dự án. Lệnh sẽ hỏi mật khẩu và không hiển thị mật khẩu ra màn hình:
 
 ```bash
-cd /opt/van-uyen/app
-sudo -u vanuyen .venv/bin/python -m app.cli.seed_teacher \
+cd /opt/van-uyen/app/app
+sudo -u vanuyen ../.venv/bin/python -m app.cli.seed_teacher \
   --username giaovien \
   --full-name "Giáo viên Văn Uyển" \
   --school-name "Tên trường"
@@ -220,7 +221,7 @@ Requires=postgresql.service
 Type=simple
 User=vanuyen
 Group=vanuyen
-WorkingDirectory=/opt/van-uyen/app
+WorkingDirectory=/opt/van-uyen/app/app
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/van-uyen/app/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips=127.0.0.1
 Restart=on-failure
@@ -260,7 +261,7 @@ URL tuyệt đối dùng cho thẻ Open Graph (ảnh/tiêu đề khi share link 
 Build và phát hành:
 
 ```bash
-cd /opt/van-uyen/app/frontend
+cd /opt/van-uyen/app/app/frontend
 sudo -u vanuyen npm ci
 sudo -u vanuyen env NUXT_PUBLIC_API_BASE=/api/v1 npm run generate
 
@@ -416,41 +417,29 @@ Hãy chắc chắn SSH đã được allow trước khi bật UFW. Không allow 
 
 ## 13. Quy trình cập nhật phiên bản
 
-Trước khi cập nhật, backup database theo mục 14. Sau đó:
+Deploy bằng script trong `pipeline/`, chạy từ máy local (cần `git`, `ssh`, `curl`):
 
 ```bash
-cd /opt/van-uyen/app
-sudo -u vanuyen git fetch origin
-sudo -u vanuyen git checkout main
-sudo -u vanuyen git pull --ff-only origin main
-
-sudo -u vanuyen .venv/bin/pip install \
-  --no-index \
-  --find-links vendor/vanuyen-wheelhouse \
-  -r requirements.txt
-sudo -u vanuyen .venv/bin/alembic upgrade head
-
-cd /opt/van-uyen/app/frontend
-sudo -u vanuyen npm ci
-sudo -u vanuyen env NUXT_PUBLIC_API_BASE=/api/v1 npm run generate
-
-sudo rsync -a --delete .output/public/ /var/www/vanuyen-root/
-sudo chown -R root:www-data /var/www/vanuyen-root
-sudo systemctl restart vanuyen-api vanuyen-ai-worker
-sudo nginx -t
-sudo systemctl reload nginx
+pipeline/setup-ssh-key.sh   # một lần: cài SSH key lên server, sau đó deploy không cần mật khẩu
+pipeline/deploy.sh          # deploy origin/main
+pipeline/deploy.sh --full   # cài lại dependency, backup + migrate, build và restart toàn bộ
+pipeline/check.sh           # chỉ kiểm tra site public
 ```
 
-Kiểm tra sau deploy:
+`deploy.sh` SSH vào server, pull `main` bằng user `vanuyen`, rồi chạy `pipeline/remote/deploy.sh` của chính commit vừa pull. Script chỉ làm phần có thay đổi so với lần deploy trước:
 
-```bash
-curl -fsS http://127.0.0.1:8000/health/ready
-curl -fsS https://nguvancohang.com/api/v1/openapi.json >/dev/null
-curl -fsS https://nguvancohang.com/ >/dev/null
-sudo systemctl --no-pager --full status vanuyen-api vanuyen-ai-worker
-```
+| Thay đổi trong | Việc thực hiện |
+|---|---|
+| `app/requirements.txt`, `app/vendor/` | Cài dependency offline từ wheelhouse, restart service |
+| `app/migrations/` | Backup database vào `/opt/van-uyen/backups/`, `alembic upgrade head`, restart service |
+| `app/frontend/` | `npm ci` (khi lock file đổi), `npm run generate`, rsync sang `/var/www/vanuyen-root` |
+| `app/app/` | Restart `vanuyen-api` và `vanuyen-ai-worker` |
 
-Nếu chỉ thay đổi frontend thì không cần restart service; nếu chỉ thay đổi backend thì có thể bỏ bước build frontend.
+Sau khi restart, script chờ `/health/ready` và báo lỗi kèm log nếu service không lên. Cuối cùng `check.sh` kiểm tra `/`, `/health` và `/api/v1/health` qua domain thật. Hai lần deploy không chạy chồng nhau (khóa `/run/vanuyen-deploy.lock`).
+
+Script cũng tự đảm bảo layout hiện tại: tạo symlink `app/.env -> ../.env` và drop-in systemd `/etc/systemd/system/<service>.service.d/workdir.conf` đặt `WorkingDirectory=/opt/van-uyen/app/app`. Sau lần deploy đầu tiên với layout mới, có thể xóa `/opt/van-uyen/app/frontend` và `/opt/van-uyen/app/vendor` cũ (script sẽ nhắc).
+
+Nếu server chưa có SSH key, đặt `DEPLOY_SSH_PASSWORD` (cần `sshpass`) hoặc nhập mật khẩu khi ssh hỏi. Không lưu mật khẩu trong repo.
 
 ## 14. Backup và khôi phục
 
@@ -587,7 +576,7 @@ Requires=postgresql.service
 [Service]
 User=vanuyen
 Group=vanuyen
-WorkingDirectory=/opt/van-uyen/app
+WorkingDirectory=/opt/van-uyen/app/app
 ExecStart=/opt/van-uyen/app/.venv/bin/python -m app.worker
 Restart=always
 RestartSec=5

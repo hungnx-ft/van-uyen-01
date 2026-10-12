@@ -7,7 +7,7 @@ Source Nuxt 4 + Vue 3 + TypeScript chuyển từ `../index.html`. Giữ phong c�
 Yêu cầu Node.js 22 trở lên (đã kiểm tra với Node.js 24), npm.
 
 ```sh
-cd frontend
+cd app/frontend
 npm ci
 npm run dev
 ```
@@ -106,7 +106,7 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE='/Applications/Google Chrome.app/Contents/MacOS/G
 
 ## Chạy toàn bộ stack bằng Docker
 
-Từ thư mục gốc:
+Từ thư mục `app/` của repo:
 
 ```sh
 docker compose up --build

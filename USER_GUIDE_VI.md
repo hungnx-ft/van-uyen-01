@@ -20,7 +20,7 @@ Khi chạy bằng Docker, hệ thống mặc định dùng backend.
 
 ### 2.1. Chạy bằng Docker
 
-Từ thư mục dự án:
+Từ thư mục `app/` của dự án (các lệnh `docker compose` trong tài liệu này đều chạy tại đây):
 
 ```sh
 cp .env.example .env
@@ -41,7 +41,7 @@ docker compose down
 ### 2.2. Chạy frontend riêng
 
 ```sh
-cd frontend
+cd app/frontend
 npm ci
 npm run dev
 ```

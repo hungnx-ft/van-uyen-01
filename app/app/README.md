@@ -1,8 +1,10 @@
 # Backend VĂN UYỂN
 
-FastAPI + SQLAlchemy + PostgreSQL: auth, phân quyền, lớp/học sinh, bài giảng, đề, bài nộp, giao đề, chấm bài và chấm bằng AI. Frontend Nuxt trong `frontend/` gọi API này khi đặt `NUXT_PUBLIC_API_BASE`. Tổng quan dự án xem `README.md` ở thư mục gốc.
+FastAPI + SQLAlchemy + PostgreSQL: auth, phân quyền, lớp/học sinh, bài giảng, đề, bài nộp, giao đề, chấm bài và chấm bằng AI. Frontend Nuxt trong `app/frontend/` gọi API này khi đặt `NUXT_PUBLIC_API_BASE`. Tổng quan dự án xem `README.md` ở thư mục gốc.
 
 ## Chạy với Docker
+
+Từ thư mục `app/` của repo:
 
 ```sh
 cp .env.example .env

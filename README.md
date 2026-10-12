@@ -7,7 +7,7 @@ Nền tảng học tập và kiểm tra môn Ngữ văn: học sinh đọc kiế
 ## Kiến trúc
 
 ```text
-Trình duyệt ──► Frontend Nuxt 4 / Vue 3 (SPA, thư mục frontend/)
+Trình duyệt ──► Frontend Nuxt 4 / Vue 3 (SPA, thư mục app/frontend/)
                     │  REST + Bearer token
                     ▼
                Backend FastAPI (thư mục app/) ──► PostgreSQL 15
@@ -44,6 +44,7 @@ Trình duyệt ──► Frontend Nuxt 4 / Vue 3 (SPA, thư mục frontend/)
 ## Chạy nhanh bằng Docker
 
 ```sh
+cd app
 cp .env.example .env
 docker compose up --build
 ```
@@ -68,6 +69,7 @@ Học sinh có thể tự đăng ký tại trang `/register`, hoặc do giáo vi
 Backend (Python 3.12, cần PostgreSQL đang chạy):
 
 ```sh
+cd app
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env          # sửa DATABASE_URL nếu cần
@@ -79,7 +81,7 @@ python -m app.worker          # chỉ khi cần chấm AI
 Frontend (Node.js 22+):
 
 ```sh
-cd frontend
+cd app/frontend
 npm ci
 NUXT_PUBLIC_API_BASE=http://localhost:8000/api/v1 npm run dev
 ```
@@ -131,6 +133,7 @@ Worker thử lại tối đa 3 lần mỗi job. Job bị kẹt ở trạng thái
 
 ```sh
 # Backend: PostgreSQL riêng trong Docker, mỗi test một schema, chạy migration thật
+cd app
 docker compose -f docker-compose.test.yml run --rm --build tests
 docker compose -f docker-compose.test.yml down -v
 
@@ -140,24 +143,26 @@ npm test
 npm run typecheck
 ```
 
-Chi tiết E2E (Playwright) xem `frontend/README.md`.
+Chi tiết E2E (Playwright) xem `app/frontend/README.md`.
 
 ## Cấu trúc thư mục
 
 ```text
-app/            Backend FastAPI: api/, services/, repositories/, models/, schemas/, worker.py
-migrations/     Migration Alembic
-frontend/       Frontend Nuxt: app/pages, app/components, app/composables
-vendor/         Bộ wheel offline cho server Linux x86_64 + Python 3.12
-index.html      Bản HTML/LocalStorage đời đầu (tham khảo)
+app/                Toàn bộ code
+  app/              Backend FastAPI: api/, services/, repositories/, models/, schemas/, worker.py
+  migrations/       Migration Alembic
+  frontend/         Frontend Nuxt: app/pages, app/components, app/composables
+  vendor/           Bộ wheel offline cho server Linux x86_64 + Python 3.12
+  index.html        Bản HTML/LocalStorage đời đầu (tham khảo)
+pipeline/           Script deploy production (xem DEPLOY_SERVER_VI.md mục 13)
 ```
 
 ## Tài liệu khác
 
 | File | Nội dung |
 |---|---|
-| `app/README.md` | Chi tiết backend: API, phân quyền, transaction, migration |
-| `frontend/README.md` | Chi tiết frontend: tổ chức source, chế độ LocalStorage, E2E |
+| `app/app/README.md` | Chi tiết backend: API, phân quyền, transaction, migration |
+| `app/frontend/README.md` | Chi tiết frontend: tổ chức source, chế độ LocalStorage, E2E |
 | `DEPLOY_SERVER_VI.md` | Triển khai lên Linux + Nginx + systemd (không Docker) |
 | `USER_GUIDE_VI.md` | Hướng dẫn sử dụng cho giáo viên và học sinh |
 | `PLAN_AI_GOC_PHAN_TICH_VI.md` | Kế hoạch tính năng chấm AI và Góc Phân tích |
