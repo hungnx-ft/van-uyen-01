@@ -24,8 +24,19 @@ class AccountCreate(BaseModel):
         return value
 
 
+RESERVED_USERNAME_PREFIXES = ("hs_", "tmp_")
+
+
 class RegisterRequest(AccountCreate):
     """Public registration cannot supply role, status, or class membership."""
+
+    @field_validator("username")
+    @classmethod
+    def not_reserved(cls, value):
+        # hs_ and tmp_ names belong to teacher-created student accounts.
+        if value.lower().startswith(RESERVED_USERNAME_PREFIXES):
+            raise ValueError("Usernames starting with hs_ or tmp_ are reserved")
+        return value
 
 
 class UserCreate(AccountCreate):
@@ -64,6 +75,7 @@ class UserResponse(BaseModel):
     role: Literal["Teacher", "Student"]
     class_id: int | None
     is_active: bool
+    must_change_password: bool = False
     created_at: datetime
 
 

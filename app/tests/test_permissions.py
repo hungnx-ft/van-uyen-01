@@ -25,31 +25,31 @@ def test_teacher_only_sees_own_classes_and_creates_students_in_own_class(client,
     headers = bearer(login(client, "teacher_one"))
     first, second = classrooms
     assert [c["id"] for c in client.get("/api/v1/classes/", headers=headers).json()] == [first.id]
-    body = {"username": "new_class_student", "password": "password-123", "full_name": "Học sinh mới", "class_id": second.id}
+    body = {"full_name": "Học sinh mới", "class_id": second.id}
     assert client.post("/api/v1/users/students", headers=headers, json=body).status_code == 404
-    assert db.query(User).filter_by(username=body["username"]).first() is None
+    assert db.query(User).filter(User.full_name == body["full_name"]).first() is None
     body["class_id"] = first.id
     response = client.post("/api/v1/users/students", headers=headers, json=body)
     assert response.status_code == 201, response.text
     assert response.json()["class_id"] == first.id
-    assert login(client, body["username"], body["password"])
+    assert login(client, response.json()["username"], "123456")
 
 
 def test_teacher_manages_free_student_only_after_adding_them_to_a_class(client, db, accounts, classrooms):
     headers = bearer(login(client, "teacher_one"))
     free = client.post("/api/v1/auth/register", json={"username": "free_student", "password": "password-123", "full_name": "Tự do"}).json()
     for user_id in (accounts["teacher_two"].id, accounts["student_two"].id, 999999):
-        assert client.put(f"/api/v1/users/students/{user_id}/password", headers=headers, json={"password": "new-password"}).status_code == 404
+        assert client.put(f"/api/v1/users/students/{user_id}/password", headers=headers, ).status_code == 404
     # Any teacher can see an unassigned student, but not take over the account.
     assert client.get(f'/api/v1/users/students/{free["id"]}', headers=headers).status_code == 200
-    assert client.put(f'/api/v1/users/students/{free["id"]}/password', headers=headers, json={"password": "new-password"}).status_code == 404
+    assert client.put(f'/api/v1/users/students/{free["id"]}/password', headers=headers, ).status_code == 404
     assert client.patch(f'/api/v1/users/students/{free["id"]}/status', headers=headers, json={"is_active": False}).status_code == 404
     assert client.delete(f'/api/v1/users/students/{free["id"]}', headers=headers).status_code == 404
 
     assert client.put(f'/api/v1/classes/{classrooms[0].id}/students/{free["id"]}', headers=headers).status_code == 200
-    response = client.put(f'/api/v1/users/students/{free["id"]}/password', headers=headers, json={"password": "new-password"})
+    response = client.put(f'/api/v1/users/students/{free["id"]}/password', headers=headers)
     assert response.status_code == 200
-    assert login(client, "free_student", "new-password")
+    assert login(client, "free_student", "123456")
 
 
 def test_teacher_student_list_includes_self_registered_students(client, accounts, classrooms):
@@ -64,11 +64,11 @@ def test_teacher_student_list_includes_self_registered_students(client, accounts
     assert any(item["id"] == registered.json()["id"] and item["class_id"] is None
                for item in response.json()["items"])
     old = login(client)
-    response = client.put(f'/api/v1/users/students/{accounts["student_one"].id}/password', headers=headers, json={"password": "new-password"})
+    response = client.put(f'/api/v1/users/students/{accounts["student_one"].id}/password', headers=headers)
     assert response.status_code == 200
     assert "password_hash" not in response.json()
     assert client.get("/api/v1/auth/me", headers=bearer(old)).status_code == 401
-    assert login(client, password="new-password")
+    assert login(client, password="123456")
 
 
 def test_class_move_requires_both_source_and_destination_ownership(client, accounts, classrooms):

@@ -45,17 +45,30 @@ export function isApiEnabled() {
   return Boolean(apiBase())
 }
 
-async function parseError(response: Response): Promise<Error> {
+/** An API failure carrying the backend's machine-readable error code. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+  ) {
+    super(message)
+  }
+}
+
+async function parseError(response: Response): Promise<ApiError> {
   let message = `API request failed (${response.status})`
+  let code: string | undefined
   try {
     const body = await response.json()
+    code = body?.error?.code
     message = body?.error?.message || body?.detail || message
     if (Array.isArray(body?.detail))
       message = body.detail.map((item: { msg?: string }) => item.msg || '').join(', ')
   } catch {
     // Keep the status based message when the server did not return JSON.
   }
-  return new Error(message)
+  return new ApiError(message, response.status, code)
 }
 
 async function refreshTokens(): Promise<ApiTokens | null> {
@@ -82,11 +95,7 @@ async function refreshTokens(): Promise<ApiTokens | null> {
   return tokens
 }
 
-export async function apiRequest<T>(
-  path: string,
-  init: RequestInit = {},
-  retry = true,
-): Promise<T> {
+async function apiFetch(path: string, init: RequestInit = {}, retry = true): Promise<Response> {
   if (!isApiEnabled()) throw new Error('Backend API chưa được cấu hình.')
   const headers = new Headers(init.headers)
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -97,11 +106,21 @@ export async function apiRequest<T>(
   const response = await fetch(`${apiBase()}${path}`, { ...init, headers })
   if (response.status === 401 && retry && tokens?.refresh_token) {
     const refreshed = await refreshTokens()
-    if (refreshed) return apiRequest<T>(path, init, false)
+    if (refreshed) return apiFetch(path, init, false)
   }
   if (!response.ok) throw await parseError(response)
+  return response
+}
+
+export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await apiFetch(path, init)
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
+}
+
+/** Downloads a protected file; the bearer token rules out a plain <img src>. */
+export async function apiBlob(path: string): Promise<Blob> {
+  return (await apiFetch(path)).blob()
 }
 
 export async function loginApi<T = unknown>(username: string, password: string) {

@@ -1,14 +1,29 @@
-from pydantic import BaseModel, ConfigDict, Field
-from typing import List, Optional
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from typing import Annotated, List, Optional
 from datetime import datetime
+
+MAX_QUESTION_SCORE = 20
+
+
+def _two_decimals(value: float) -> float:
+    value = round(value, 2)
+    if value <= 0:
+        raise ValueError("Question score must be at least 0.01")
+    return value
+
+
+# Each question carries its own score; the exam total is their sum.
+QuestionScore = Annotated[float, Field(gt=0, le=MAX_QUESTION_SCORE, allow_inf_nan=False),
+                          AfterValidator(_two_decimals)]
+
 
 class PracticeQuestionBase(BaseModel):
     content: str
-    max_score: float = 0.8
+    max_score: float
     answer_key: str = ""
 
 class PracticeQuestionCreate(PracticeQuestionBase):
-    pass
+    max_score: QuestionScore
 
 class PracticeQuestionResponse(PracticeQuestionBase):
     id: int
@@ -39,7 +54,7 @@ class MockQuestionBase(BaseModel):
     answer_key: str = ""
 
 class MockQuestionCreate(MockQuestionBase):
-    pass
+    max_score: QuestionScore
 
 class MockQuestionResponse(MockQuestionBase):
     id: int

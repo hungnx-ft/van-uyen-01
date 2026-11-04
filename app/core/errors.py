@@ -11,8 +11,16 @@ CODES = {400: "bad_request", 401: "unauthorized", 403: "forbidden", 404: "not_fo
          405: "method_not_allowed", 413: "payload_too_large", 409: "conflict", 422: "validation_error", 503: "unavailable"}
 
 
-def error_response(status: int, message: str, *, details=None, headers=None):
-    body = {"code": CODES.get(status, "internal_error"), "message": message}
+class CodedHTTPException(HTTPException):
+    """An HTTP error whose machine-readable code differs from the status default."""
+
+    def __init__(self, status_code: int, code: str, detail: str):
+        super().__init__(status_code, detail)
+        self.code = code
+
+
+def error_response(status: int, message: str, *, details=None, headers=None, code: str | None = None):
+    body = {"code": code or CODES.get(status, "internal_error"), "message": message}
     if details is not None:
         body["details"] = details
     return JSONResponse(status_code=status, content={"error": body}, headers=headers)
@@ -21,7 +29,8 @@ def error_response(status: int, message: str, *, details=None, headers=None):
 def install_error_handlers(app: FastAPI):
     @app.exception_handler(HTTPException)
     async def http_error(request: Request, exc: HTTPException):
-        return error_response(exc.status_code, str(exc.detail), headers=exc.headers)
+        return error_response(exc.status_code, str(exc.detail), headers=exc.headers,
+                              code=getattr(exc, "code", None))
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):

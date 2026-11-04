@@ -1,7 +1,9 @@
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models.assignment import Assignment
 from app.models.exam import MockExam, MockQuestion, PracticeExam, PracticeQuestion
+from app.models.submission import SubmissionAnswer, SubmissionScore
 from app.repositories.exam import practice_exam_repo, mock_exam_repo
 from app.schemas.exam import PracticeExamCreate, MockExamCreate
 
@@ -22,7 +24,7 @@ def update_practice_exam(db: Session, exam_id: int, exam_in: PracticeExamCreate,
     exam.title, exam.target_group, exam.passage, exam.genre, exam.duration_minutes = (
         exam_in.title, exam_in.target_group, exam_in.passage, exam_in.genre, exam_in.duration_minutes
     )
-    _replace_questions(exam, exam_in.questions, PracticeQuestion, ("content", "max_score", "answer_key"))
+    _replace_questions(db, exam, exam_in.questions, PracticeQuestion, ("content", "max_score", "answer_key"))
     db.flush()
     db.refresh(exam)
     return exam
@@ -36,13 +38,13 @@ def update_mock_exam(db: Session, exam_id: int, exam_in: MockExamCreate, teacher
     exam.title, exam.target_group, exam.passage, exam.genre, exam.duration_minutes = (
         exam_in.title, exam_in.target_group, exam_in.passage, exam_in.genre, exam_in.duration_minutes
     )
-    _replace_questions(exam, exam_in.questions, MockQuestion, ("section", "content", "max_score", "answer_key"))
+    _replace_questions(db, exam, exam_in.questions, MockQuestion, ("section", "content", "max_score", "answer_key"))
     db.flush()
     db.refresh(exam)
     return exam
 
 
-def _replace_questions(exam, questions_in, model, fields):
+def _replace_questions(db: Session, exam, questions_in, model, fields):
     if not exam.submissions:
         exam.questions = [model(**{field: getattr(q, field) for field in fields}) for q in questions_in]
         return
@@ -51,6 +53,21 @@ def _replace_questions(exam, questions_in, model, fields):
     current = sorted(exam.questions, key=lambda q: q.id)
     if len(current) != len(questions_in):
         raise HTTPException(409, "Cannot add or remove questions after students have submitted")
+    question_column = (SubmissionAnswer.practice_question_id if model is PracticeQuestion
+                       else SubmissionAnswer.mock_question_id)
+    graded = dict(
+        db.query(question_column, func.max(SubmissionScore.score))
+        .join(SubmissionScore, SubmissionScore.answer_id == SubmissionAnswer.id)
+        .filter(question_column.in_([q.id for q in current]))
+        .group_by(question_column)
+        .all()
+    )
+    for index, (question, q_in) in enumerate(zip(current, questions_in), start=1):
+        # Lowering a maximum below an awarded score would leave invalid grades behind.
+        if q_in.max_score < graded.get(question.id, 0) - 1e-6:
+            raise HTTPException(
+                409, f"Question {index} score cannot be lower than an already awarded score ({graded[question.id]:g})"
+            )
     for question, q_in in zip(current, questions_in):
         for field in fields:
             setattr(question, field, getattr(q_in, field))

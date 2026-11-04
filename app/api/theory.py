@@ -1,13 +1,15 @@
-from pathlib import Path
-from uuid import uuid4
-from app.core.config import settings
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form
-from sqlalchemy.orm import Session
+from urllib.parse import quote
+
+from fastapi import APIRouter, Depends, File, Response, UploadFile
+from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session, selectinload
 from app.database.session import get_db
-from app.schemas.theory import TheoryArticleCreate, TheoryArticleResponse, TheoryArticleUpdate
-from app.services.theory import create_theory_article, delete_theory_article, update_theory_article
-from app.repositories.theory import theory_repo
+from app.schemas.theory import (TheoryArticleCreate, TheoryArticleResponse, TheoryArticleUpdate,
+                                TheoryAttachmentResponse, TheoryLinkCreate)
+from app.services.theory import (add_file_attachment, add_link_attachment, create_theory_article,
+                                 delete_attachment, delete_theory_article, readable_attachment,
+                                 update_theory_article)
 from app.dependencies.auth import get_current_teacher, get_current_user
 from app.models.user import User
 from app.models.theory import TheoryArticle
@@ -24,40 +26,6 @@ def create_new_theory(
 ):
     return create_theory_article(db, theory_in=theory_in, teacher_id=current_user.id)
 
-@router.post("/upload", response_model=TheoryArticleResponse)
-def upload_theory_file(
-    title: str = Form(...),
-    content_type: str = Form(...), # PDF or Image
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_teacher)
-):
-    if content_type not in ["PDF", "Image"]:
-        raise HTTPException(status_code=400, detail="Invalid content type for upload")
-        
-    # Do not trust a client-supplied filename as a filesystem path.
-    upload_dir = Path(settings.UPLOAD_DIR)
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    file_path = upload_dir / str(uuid4())
-    size = 0
-    try:
-        with file_path.open("xb") as buffer:
-            while chunk := file.file.read(64 * 1024):
-                size += len(chunk)
-                if size > 5 * 1024 * 1024:
-                    raise HTTPException(422, "File must not exceed 5 MB")
-                buffer.write(chunk)
-    except Exception:
-        file_path.unlink(missing_ok=True)
-        raise
-
-    theory_in = TheoryArticleCreate(
-        title=title,
-        content_type=content_type,
-        content=str(file_path)
-    )
-    return create_theory_article(db, theory_in=theory_in, teacher_id=current_user.id)
-
 @router.get("/", response_model=List[TheoryArticleResponse])
 def read_theories(
     skip: int = 0,
@@ -65,7 +33,8 @@ def read_theories(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return visible_content(db, TheoryArticle, current_user).offset(max(skip, 0)).limit(min(max(limit, 1), 100)).all()
+    query = visible_content(db, TheoryArticle, current_user).options(selectinload(TheoryArticle.attachments))
+    return query.order_by(TheoryArticle.id).offset(max(skip, 0)).limit(min(max(limit, 1), 100)).all()
 
 
 @router.patch("/{article_id}", response_model=TheoryArticleResponse)
@@ -77,3 +46,36 @@ def edit_theory(article_id: int, request: TheoryArticleUpdate, db: Session = Dep
 def remove_theory(article_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
     delete_theory_article(db, article_id, current_user.id)
     return Response(status_code=204)
+
+
+@router.post("/{article_id}/attachments", response_model=TheoryAttachmentResponse, status_code=201)
+def upload_attachment(article_id: int, file: UploadFile = File(...), db: Session = Depends(get_db),
+                      current_user: User = Depends(get_current_teacher)):
+    return add_file_attachment(db, article_id, current_user.id, file)
+
+
+@router.post("/{article_id}/links", response_model=TheoryAttachmentResponse, status_code=201)
+def add_link(article_id: int, link: TheoryLinkCreate, db: Session = Depends(get_db),
+             current_user: User = Depends(get_current_teacher)):
+    return add_link_attachment(db, article_id, current_user.id, link)
+
+
+@router.delete("/{article_id}/attachments/{attachment_id}", status_code=204)
+def remove_attachment(article_id: int, attachment_id: int, db: Session = Depends(get_db),
+                      current_user: User = Depends(get_current_teacher)):
+    delete_attachment(db, article_id, attachment_id, current_user.id)
+    return Response(status_code=204)
+
+
+@router.get("/attachments/{attachment_id}")
+def download_attachment(attachment_id: int, db: Session = Depends(get_db),
+                        current_user: User = Depends(get_current_user)):
+    attachment, path = readable_attachment(db, attachment_id, current_user)
+    # Images and PDFs open in the reader; anything else downloads.
+    disposition = "inline" if attachment.kind == "image" or attachment.mime_type == "application/pdf" else "attachment"
+    headers = {
+        "Content-Disposition": f"{disposition}; filename*=UTF-8''{quote(attachment.original_name)}",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, max-age=3600",
+    }
+    return FileResponse(path, media_type=attachment.mime_type, headers=headers)

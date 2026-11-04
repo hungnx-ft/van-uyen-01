@@ -2,8 +2,7 @@
 import type { TheoryArticle } from '~/types'
 import { mainCategories, subCategories } from '~/utils/exams'
 import { isApiEnabled } from '~/utils/api'
-const { data, upsert, remove, createRemoteTheory, updateRemoteTheory, deleteRemoteTheory } =
-    useDatabase(),
+const { data, remove, deleteRemoteTheory } = useDatabase(),
   { isTeacher, requireTeacher } = useAuth(),
   { show } = useToast()
 const main = ref('doc-hieu'),
@@ -26,23 +25,14 @@ const subItems = computed(() =>
   })),
 )
 function newArticle(): TheoryArticle {
-  return { id: crypto.randomUUID(), title: '', mainCat: main.value, subCat: sub.value, type: 'reference', format: 'text', icon: '📚', desc: '', content: '' }
+  return { id: crypto.randomUUID(), title: '', mainCat: main.value, subCat: sub.value, type: 'reference', format: 'mixed', icon: '📚', desc: '', content: '', attachments: [] }
 }
-async function save(article: TheoryArticle) {
-  try {
-    requireTeacher()
-    if (isApiEnabled()) {
-      if (data.value.theory_articles.some((item) => item.id === article.id))
-        await updateRemoteTheory(article)
-      else await createRemoteTheory(article)
-    } else upsert('theory_articles', article)
-    main.value = article.mainCat
-    nextTick(() => (sub.value = article.subCat))
-    editing.value = null
-    show('Đăng bài thành công! 🌿')
-  } catch (e) {
-    show((e as Error).message)
-  }
+// The editor persists the post itself, including attachments.
+function saved(article: TheoryArticle) {
+  main.value = article.mainCat
+  nextTick(() => (sub.value = article.subCat))
+  editing.value = null
+  show('Đăng bài thành công! 🌿')
 }
 async function destroy() {
   try {
@@ -89,7 +79,7 @@ async function destroy() {
       :category="main"
       :subcategory="sub"
       :article="editing.title ? editing : undefined"
-      @save="save"
+      @saved="saved"
       @close="editing = null"
     />
     <ConfirmDialog

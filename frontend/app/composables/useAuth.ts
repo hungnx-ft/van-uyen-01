@@ -16,13 +16,16 @@ export function useAuth() {
         : null,
   )
   const isTeacher = computed(() => user.value?.role === 'teacher')
+  const mustChangePassword = computed(() => Boolean(user.value?.mustChangePassword))
+  // Every data endpoint answers 403 until a pending password change is done.
+  async function establishRemote(account: ApiUser) {
+    remoteUser.value = mapApiUser(account)
+    if (!account.must_change_password) await syncRemote()
+  }
   function restore() {
     if (isApiEnabled()) {
       return apiRequest<ApiUser>('/auth/me')
-        .then(async (account) => {
-          remoteUser.value = mapApiUser(account)
-          await syncRemote()
-        })
+        .then(establishRemote)
         .catch(() => {
           clearApiSession()
           remoteUser.value = null
@@ -47,10 +50,7 @@ export function useAuth() {
   }
   function login(id: string, password: string) {
     if (isApiEnabled()) {
-      return loginApi<ApiUser>(id.trim(), password).then(async (account) => {
-        remoteUser.value = mapApiUser(account)
-        await syncRemote()
-      })
+      return loginApi<ApiUser>(id.trim(), password).then(establishRemote)
     }
     if (!ready.value) throw new Error('Kho dữ liệu chưa sẵn sàng.')
     const found = data.value.users.find(
@@ -61,10 +61,7 @@ export function useAuth() {
   }
   function register(id: string, password: string, fullName: string) {
     if (isApiEnabled()) {
-      return registerApi<ApiUser>(id.trim(), password, fullName.trim()).then(async (account) => {
-        remoteUser.value = mapApiUser(account)
-        await syncRemote()
-      })
+      return registerApi<ApiUser>(id.trim(), password, fullName.trim()).then(establishRemote)
     }
     id = id.trim()
     fullName = fullName.trim()
@@ -134,6 +131,7 @@ export function useAuth() {
   return {
     user,
     isTeacher,
+    mustChangePassword,
     authReady,
     restore,
     login,
@@ -152,6 +150,7 @@ interface ApiUser {
   role: 'Teacher' | 'Student'
   class_id: number | null
   is_active: boolean
+  must_change_password?: boolean
 }
 
 function mapApiUser(account: ApiUser): User {
@@ -164,5 +163,6 @@ function mapApiUser(account: ApiUser): User {
     classId: account.class_id === null ? undefined : String(account.class_id),
     schoolName: account.school_name || undefined,
     isClassStudent: account.class_id !== null,
+    mustChangePassword: Boolean(account.must_change_password),
   }
 }

@@ -4,6 +4,7 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.errors import CodedHTTPException
 from app.core.security import utcnow
 from app.database.session import get_db
 from app.models.auth_session import AuthSession
@@ -32,10 +33,21 @@ def get_current_session(db: Session = Depends(get_db), token: str = Depends(oaut
     return session
 
 
-def get_current_user(db: Session = Depends(get_db), session: AuthSession = Depends(get_current_session)) -> User:
+PASSWORD_CHANGE_REQUIRED = "password_change_required"
+
+
+def get_current_user_allow_pending(db: Session = Depends(get_db),
+                                   session: AuthSession = Depends(get_current_session)) -> User:
+    """Authenticate without the password-change gate; only for /auth/me, /password and /logout."""
     user = db.get(User, session.user_id)
     if not user or not user.is_active:
         raise invalid_credentials()
+    return user
+
+
+def get_current_user(user: User = Depends(get_current_user_allow_pending)) -> User:
+    if user.must_change_password:
+        raise CodedHTTPException(403, PASSWORD_CHANGE_REQUIRED, "Password change required")
     return user
 
 

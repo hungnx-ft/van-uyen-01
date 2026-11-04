@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import type { Exam, ExamType } from '~/types'
-import { duration, newQuestions, questionLabel, practiceGroups, mockGroups } from '~/utils/exams'
+import {
+  duration,
+  newQuestions,
+  questionLabel,
+  practiceGroups,
+  mockGroups,
+  formatScore,
+  MAX_QUESTION_SCORE,
+  totalScore,
+} from '~/utils/exams'
 const props = defineProps<{ type: ExamType; exam?: Exam; group: string }>(),
   emit = defineEmits<{ save: [exam: Exam, rubricFile?: File]; close: [] }>()
 const form = reactive<Exam>(
@@ -32,6 +41,7 @@ const mockSectionCounts = reactive<Record<1 | 2, number>>({
   2: props.type === 'mock' ? Math.max(1, form.questions.filter((q) => q.section === 2).length) : 1,
 })
 const requested = ref('')
+const total = computed(() => totalScore(form))
 const rubricFile = ref<File | undefined>()
 function chooseRubric(event: Event) {
   rubricFile.value = (event.target as HTMLInputElement).files?.[0]
@@ -219,11 +229,23 @@ function sectionQuestionIndex(index: number) {
           <strong>
             {{
               type === 'mock'
-                ? `Câu ${sectionQuestionIndex(i)} (${q.score}đ)`
-                : questionLabel(type, i, q.score)
+                ? `Câu ${sectionQuestionIndex(i)} (${formatScore(q.score)}đ)`
+                : questionLabel(type, i, formatScore(q.score))
             }}
           </strong>
           <div class="form-row mt-2">
+            <label class="score-input">
+              Điểm
+              <input
+                v-model.number="q.score"
+                type="number"
+                class="input-control"
+                min="0.01"
+                :max="MAX_QUESTION_SCORE"
+                step="0.01"
+                required
+              />
+            </label>
             <label v-if="form.questions.length > 1">
               Câu hỏi
               <textarea
@@ -245,6 +267,10 @@ function sectionQuestionIndex(index: number) {
           </div>
         </div>
       </template>
+      <p class="exam-total">
+        Tổng điểm:
+        <strong>{{ total }}</strong>
+      </p>
       <div class="input-group">
         <label>
           Barem chấm (tuỳ chọn)
@@ -264,3 +290,13 @@ function sectionQuestionIndex(index: number) {
     @confirm="applyGroup(requested)"
   />
 </template>
+
+<style scoped>
+.score-input {
+  flex: 0 0 110px;
+}
+.exam-total {
+  font-size: 1.1rem;
+  margin: 12px 0;
+}
+</style>

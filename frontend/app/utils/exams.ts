@@ -67,6 +67,12 @@ function practiceBaseGroup(group: string) {
   if (group === 'vao-10-lop-9') return 'vao-10'
   return group
 }
+/** Matches the backend limit for one question's score. */
+export const MAX_QUESTION_SCORE = 20
+/** Rounds to 2 decimals so float sums such as 0.1 + 0.2 display cleanly. */
+export function formatScore(score: number) {
+  return Number.isFinite(score) ? Math.round(score * 100) / 100 : 0
+}
 export function questionLabel(type: ExamType, i: number, score: number) {
   const prefix =
     type === 'practice'
@@ -124,8 +130,9 @@ export function clockText(seconds: number) {
     .toString()
     .padStart(2, '0')}`
 }
+/** The exam total is always the sum of its questions' scores. */
 export function totalScore(exam: Exam) {
-  return exam.questions.reduce((sum, q) => sum + q.score, 0)
+  return formatScore(exam.questions.reduce((sum, q) => sum + (Number(q.score) || 0), 0))
 }
 export function scoreOptions(max: number) {
   const values = Array.from({ length: Math.floor(max * 4) + 1 }, (_, i) => i / 4)

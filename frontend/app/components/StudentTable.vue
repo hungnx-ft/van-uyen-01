@@ -37,6 +37,13 @@ function studentCode(user: User) {
           <td>
             {{ u.fullName }}
             <span v-if="u.isActive === false" class="text-light">(đã khóa)</span>
+            <span
+              v-if="u.mustChangePassword"
+              class="password-pending"
+              title="Đang dùng mật khẩu mặc định"
+            >
+              Chưa đổi mật khẩu
+            </span>
           </td>
           <td>{{ u.className }}</td>
           <td>{{ u.username || u.id }}</td>
@@ -87,3 +94,15 @@ function studentCode(user: User) {
     </table>
   </div>
 </template>
+
+<style scoped>
+.password-pending {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #fff3cd;
+  color: #7a5b00;
+}
+</style>
