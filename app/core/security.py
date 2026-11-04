@@ -44,6 +44,11 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
+def hash_default_password(password: str) -> str:
+    """Hash a system-issued default password, which is exempt from the length rule."""
+    return pwd_context.hash(password)
+
+
 def new_refresh_token() -> str:
     return secrets.token_urlsafe(48)
 

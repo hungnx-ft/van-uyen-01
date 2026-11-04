@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import * as XLSX from 'xlsx'
 import { isApiEnabled } from '~/utils/api'
+import { DEFAULT_STUDENT_PASSWORD, studentUsername } from '~/utils/students'
 
 interface ImportRow {
   row: number
   fullName: string
-  username: string
-  password: string
   schoolName: string
   className: string
   classYear: string
@@ -41,28 +40,6 @@ function pick(row: Record<string, unknown>, names: string[]) {
   return found ? clean(found[1]) : ''
 }
 
-function makeUsername(fullName: string, index: number, used: Set<string>) {
-  const base =
-    fullName
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '') || 'hoc_sinh'
-  let candidate = `hs_${base}_${index}`
-  let suffix = 1
-  while (used.has(candidate)) candidate = `hs_${base}_${index}_${suffix++}`
-  return candidate
-}
-
-function makePassword(index: number) {
-  const bytes = new Uint8Array(9)
-  crypto.getRandomValues(bytes)
-  return `VuYen${index}${Array.from(bytes, (byte) => byte.toString(36))
-    .join('')
-    .slice(0, 8)}`
-}
-
 async function readFile(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
@@ -72,21 +49,14 @@ async function readFile(event: Event) {
     const sheet = workbook.Sheets[workbook.SheetNames[0] || '']
     if (!sheet) throw new Error('File Excel không có sheet dữ liệu.')
     const source = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' })
-    const used = new Set(data.value.users.map((user) => user.username || user.id))
     rows.value = source.map((item, index) => {
       const fullName = pick(item, ['hoten', 'hovaten', 'fullname', 'name'])
-      const suppliedUsername = pick(item, ['username', 'taikhoan', 'tendangnhap'])
-      const username = suppliedUsername || makeUsername(fullName, index + 1, used)
-      used.add(username)
-      const password = pick(item, ['password', 'matkhau']) || makePassword(index + 1)
       const className = pick(item, ['class', 'lop', 'tenlop', 'classname'])
       const classYear =
         pick(item, ['khoa', 'nienkhoa', 'year', 'namhoc', 'schoolyear']) || defaultYear.value
       return {
         row: index + 2,
         fullName,
-        username,
-        password,
         schoolName: pick(item, ['school', 'truong', 'schoolname']),
         className,
         classYear,
@@ -104,8 +74,8 @@ async function readFile(event: Event) {
 
 function downloadTemplate() {
   const sheet = XLSX.utils.aoa_to_sheet([
-    ['Họ và tên', 'Tên đăng nhập', 'Mật khẩu', 'Trường', 'Lớp', 'Khóa'],
-    ['Nguyễn Văn A', '', '', 'THCS ...', '6A1', '2025-2026'],
+    ['Họ và tên', 'Trường', 'Lớp', 'Khóa'],
+    ['Nguyễn Văn A', 'THCS ...', '6A1', '2025-2026'],
   ])
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, sheet, 'HocSinh')
@@ -153,8 +123,6 @@ async function submit() {
         const result = await createRemoteStudentsBulk(
           classroom.id,
           classRows.map((row) => ({
-            username: row.username,
-            password: row.password,
             fullName: row.fullName,
             schoolName: row.schoolName,
           })),
@@ -168,12 +136,11 @@ async function submit() {
         )
         failed.push(
           ...result.failed.map((failure) => {
-            const original = classRows.find((row) => row.username === failure.username)
+            // The backend numbers rows from 2 in the order they were sent.
+            const original = classRows[failure.row - 2]
             return {
               row: original?.row || failure.row,
-              fullName: original?.fullName || '',
-              username: failure.username || '',
-              password: '',
+              fullName: original?.fullName || failure.full_name || '',
               schoolName: original?.schoolName || '',
               className: original?.className || '',
               classYear: original?.classYear || '',
@@ -186,29 +153,31 @@ async function submit() {
       createdCredentials.value = created
       rows.value = failed
     } else {
-      const existing = new Set(data.value.users.map((user) => user.username || user.id))
-      const duplicate = valid.find((row) => existing.has(row.username))
-      if (duplicate) throw new Error(`Tên đăng nhập đã tồn tại: ${duplicate.username}`)
-      set('users', [
-        ...data.value.users,
-        ...valid.map((row) => ({
-          ...(() => {
-            const classroom = classMap.get(`${row.className.toLowerCase()}|${row.classYear}`)!
-            return { classId: classroom.id, className: classroom.name }
-          })(),
-          id: row.username,
-          username: row.username,
-          password: row.password,
+      // Offline mode has no database id, so number accounts by the next free sequence.
+      const used = new Set(data.value.users.map((user) => user.username || user.id))
+      let next = data.value.users.length + 1
+      const accounts = valid.map((row) => {
+        while (used.has(studentUsername(row.fullName, next))) next++
+        const username = studentUsername(row.fullName, next)
+        used.add(username)
+        const classroom = classMap.get(`${row.className.toLowerCase()}|${row.classYear}`)!
+        return {
+          classId: classroom.id,
+          className: classroom.name,
+          id: username,
+          username,
+          password: DEFAULT_STUDENT_PASSWORD,
           role: 'student' as const,
           fullName: row.fullName,
           schoolName: row.schoolName || undefined,
           isClassStudent: true,
-        })),
-      ])
-      createdCredentials.value = valid.map((row) => ({
-        fullName: row.fullName,
-        username: row.username,
-        password: row.password,
+        }
+      })
+      set('users', [...data.value.users, ...accounts])
+      createdCredentials.value = accounts.map((account) => ({
+        fullName: account.fullName,
+        username: account.username,
+        password: account.password,
       }))
       show(`Đã tạo ${valid.length} tài khoản.`)
       rows.value = []
@@ -240,7 +209,11 @@ function downloadCredentials() {
   <div class="bulk-student-import">
     <h3 class="font-heading mb-3 text-primary">📊 Tạo tài khoản từ Excel</h3>
     <p class="text-light mb-3">
-      Cột bắt buộc: Họ và tên, Lớp. Tài khoản và mật khẩu sẽ tự tạo nếu để trống.
+      Cột bắt buộc: Họ và tên, Lớp. Tài khoản tự tạo theo mẫu
+      <code>hs_hovaten_mã</code>
+      , mật khẩu mặc định
+      <code>{{ DEFAULT_STUDENT_PASSWORD }}</code>
+      ; học sinh phải đổi mật khẩu khi đăng nhập lần đầu.
     </p>
     <div class="input-group">
       <label>
@@ -264,8 +237,6 @@ function downloadCredentials() {
           <tr>
             <th>Dòng</th>
             <th>Họ tên</th>
-            <th>Tài khoản</th>
-            <th>Mật khẩu</th>
             <th>Lớp</th>
             <th>Niên khóa</th>
             <th>Trạng thái</th>
@@ -275,8 +246,6 @@ function downloadCredentials() {
           <tr v-for="row in rows" :key="row.row">
             <td>{{ row.row }}</td>
             <td>{{ row.fullName || '—' }}</td>
-            <td>{{ row.username || '—' }}</td>
-            <td>{{ row.password || '—' }}</td>
             <td>{{ row.className || '—' }}</td>
             <td>{{ row.classYear || '—' }}</td>
             <td>{{ row.error || 'Sẵn sàng' }}</td>
@@ -293,13 +262,35 @@ function downloadCredentials() {
     >
       Tạo {{ rows.filter((row) => !row.error).length }} tài khoản
     </button>
-    <button
-      v-if="createdCredentials.length"
-      type="button"
-      class="btn btn-secondary w-full mt-2"
-      @click="downloadCredentials"
-    >
-      Tải danh sách tài khoản đã tạo
-    </button>
+    <template v-if="createdCredentials.length">
+      <h4 class="font-heading mt-3 mb-2 text-primary">
+        Tài khoản đã tạo ({{ createdCredentials.length }})
+      </h4>
+      <div style="overflow-x: auto; max-height: 280px">
+        <table class="leaderboard-table" style="font-size: 0.85rem">
+          <thead>
+            <tr>
+              <th>Họ tên</th>
+              <th>Tài khoản</th>
+              <th>Mật khẩu</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in createdCredentials" :key="item.username">
+              <td>{{ item.fullName }}</td>
+              <td>
+                <code>{{ item.username }}</code>
+              </td>
+              <td>
+                <code>{{ item.password }}</code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-secondary w-full mt-2" @click="downloadCredentials">
+        Tải danh sách tài khoản đã tạo
+      </button>
+    </template>
   </div>
 </template>

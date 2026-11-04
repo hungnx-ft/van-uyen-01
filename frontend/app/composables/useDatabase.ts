@@ -1,7 +1,7 @@
-import type { Database, Exam, Result } from '~/types'
+import type { Database, Exam, Result, TheoryArticle } from '~/types'
 import { emptyDatabase } from '~/utils/storage'
 import { createLocalDatabase } from '~/repositories/localDatabase'
-import { apiRequest, isApiEnabled } from '~/utils/api'
+import { apiBlob, apiRequest, isApiEnabled } from '~/utils/api'
 
 export function useDatabase() {
   const data = useState<Database>('database', emptyDatabase)
@@ -84,15 +84,7 @@ export function useDatabase() {
   async function createRemoteTheory(article: Database['theory_articles'][number]) {
     const created = await apiRequest<ApiTheory>('/theory/', {
       method: 'POST',
-      body: JSON.stringify({
-        title: article.title,
-        content_type: article.format,
-        content: article.content || article.fileData || '',
-        main_category: article.mainCat,
-        sub_category: article.subCat,
-        description: article.desc,
-        icon: article.icon,
-      }),
+      body: JSON.stringify(theoryPayload(article)),
     })
     const mapped = mapTheory(created)
     data.value.theory_articles = [...data.value.theory_articles, mapped]
@@ -101,21 +93,40 @@ export function useDatabase() {
   async function updateRemoteTheory(article: Database['theory_articles'][number]) {
     const updated = await apiRequest<ApiTheory>(`/theory/${Number(article.id)}`, {
       method: 'PATCH',
-      body: JSON.stringify({
-        title: article.title,
-        content_type: article.format,
-        content: article.content || article.fileData || '',
-        main_category: article.mainCat,
-        sub_category: article.subCat,
-        description: article.desc,
-        icon: article.icon,
-      }),
+      body: JSON.stringify(theoryPayload(article)),
     })
-    const mapped = mapTheory(updated)
+    return replaceTheory(mapTheory(updated))
+  }
+  function replaceTheory(article: TheoryArticle) {
     data.value.theory_articles = data.value.theory_articles.map((item) =>
-      item.id === mapped.id ? mapped : item,
+      item.id === article.id ? article : item,
     )
-    return mapped
+    return article
+  }
+  async function reloadRemoteTheory(articleId: string) {
+    const all = await apiRequest<ApiTheory[]>('/theory/')
+    const found = all.find((item) => String(item.id) === articleId)
+    if (!found) throw new Error('Không tìm thấy bài viết.')
+    return replaceTheory(mapTheory(found))
+  }
+  async function uploadRemoteTheoryFile(articleId: string, file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    await apiRequest(`/theory/${Number(articleId)}/attachments`, { method: 'POST', body: form })
+  }
+  async function addRemoteTheoryLink(articleId: string, url: string, title: string) {
+    await apiRequest(`/theory/${Number(articleId)}/links`, {
+      method: 'POST',
+      body: JSON.stringify({ url, title }),
+    })
+  }
+  async function deleteRemoteTheoryAttachment(articleId: string, attachmentId: string) {
+    await apiRequest(`/theory/${Number(articleId)}/attachments/${Number(attachmentId)}`, {
+      method: 'DELETE',
+    })
+  }
+  function fetchRemoteTheoryAttachment(attachmentId: string) {
+    return apiBlob(`/theory/attachments/${Number(attachmentId)}`)
   }
   async function deleteRemoteTheory(articleId: string) {
     await apiRequest(`/theory/${Number(articleId)}`, { method: 'DELETE' })
@@ -260,18 +271,16 @@ export function useDatabase() {
     data.value.classes = [...data.value.classes, mapped]
     return mapped
   }
-  async function resetRemoteStudentPassword(studentId: string, password: string) {
+  // Credentials are returned once for display; the cached user list never keeps them.
+  async function resetRemoteStudentPassword(studentId: string) {
     const student = await apiRequest<ApiStudent>(`/users/students/${Number(studentId)}/password`, {
       method: 'PUT',
-      body: JSON.stringify({ password }),
     })
     const mapped = mapStudent(student)
     data.value.users = data.value.users.map((user) => (user.id === mapped.id ? mapped : user))
-    return mapped
+    return { ...mapped, password: student.temporary_password || '' }
   }
   async function createRemoteStudent(input: {
-    username: string
-    password: string
     fullName: string
     classId: string
     schoolName?: string
@@ -279,34 +288,24 @@ export function useDatabase() {
     const student = await apiRequest<ApiStudent>('/users/students', {
       method: 'POST',
       body: JSON.stringify({
-        username: input.username,
-        password: input.password,
         full_name: input.fullName,
         school_name: input.schoolName || null,
         class_id: Number(input.classId),
-        role: 'Student',
       }),
     })
     const mapped = mapStudent(student)
     data.value.users = [...data.value.users, mapped]
-    return mapped
+    return { ...mapped, password: student.temporary_password || '' }
   }
   async function createRemoteStudentsBulk(
     classId: string,
-    students: Array<{
-      username: string
-      password: string
-      fullName: string
-      schoolName?: string
-    }>,
+    students: Array<{ fullName: string; schoolName?: string }>,
   ) {
     const result = await apiRequest<ApiBulkStudentResult>('/users/students/bulk', {
       method: 'POST',
       body: JSON.stringify({
         class_id: Number(classId),
         students: students.map((student) => ({
-          username: student.username,
-          password: student.password,
           full_name: student.fullName,
           school_name: student.schoolName || null,
         })),
@@ -314,7 +313,13 @@ export function useDatabase() {
     })
     const mapped = result.created.map(mapStudent)
     data.value.users = [...data.value.users, ...mapped]
-    return { ...result, created: mapped }
+    return {
+      ...result,
+      created: mapped.map((student, index) => ({
+        ...student,
+        password: result.created[index]?.temporary_password || '',
+      })),
+    }
   }
   async function moveRemoteStudent(studentId: string, classId: string) {
     const student = await apiRequest<ApiStudent>(
@@ -406,6 +411,11 @@ export function useDatabase() {
     createRemoteTheory,
     updateRemoteTheory,
     deleteRemoteTheory,
+    reloadRemoteTheory,
+    uploadRemoteTheoryFile,
+    addRemoteTheoryLink,
+    deleteRemoteTheoryAttachment,
+    fetchRemoteTheoryAttachment,
     createRemoteExam,
     updateRemoteExam,
     deleteRemoteExam,
@@ -433,6 +443,14 @@ export function useDatabase() {
   }
 }
 
+interface ApiTheoryAttachment {
+  id: number
+  kind: 'image' | 'file' | 'link'
+  url?: string | null
+  original_name: string
+  mime_type?: string | null
+  size_bytes?: number | null
+}
 interface ApiTheory {
   id: number
   title: string
@@ -442,6 +460,7 @@ interface ApiTheory {
   sub_category?: string | null
   description?: string
   icon?: string
+  attachments?: ApiTheoryAttachment[]
 }
 interface ApiQuestion {
   id: number
@@ -524,6 +543,7 @@ interface ApiStudent {
   class_id: number | null
   class_name: string | null
   is_active: boolean
+  must_change_password?: boolean
   temporary_password?: string
 }
 interface ApiStudentPage {
@@ -531,7 +551,7 @@ interface ApiStudentPage {
 }
 interface ApiBulkStudentResult {
   created: ApiStudent[]
-  failed: Array<{ row: number; username?: string | null; detail: string }>
+  failed: Array<{ row: number; full_name?: string | null; detail: string }>
 }
 interface ApiSubmissionAnswer {
   id: number
@@ -560,8 +580,24 @@ interface ApiSubmission {
   answers: ApiSubmissionAnswer[]
 }
 
-function mapTheory(article: ApiTheory) {
+const legacyFileFormats = ['image', 'pdf', 'link']
+
+function theoryPayload(article: TheoryArticle) {
+  return {
+    title: article.title,
+    content_type: 'mixed',
+    content: article.content,
+    main_category: article.mainCat,
+    sub_category: article.subCat,
+    description: article.desc,
+    icon: article.icon,
+  }
+}
+
+function mapTheory(article: ApiTheory): TheoryArticle {
   const format = String(article.content_type || 'text').toLowerCase()
+  // Old single-format posts stored the image, PDF or link itself in content.
+  const legacyFile = legacyFileFormats.includes(format)
   return {
     id: String(article.id),
     title: article.title,
@@ -571,7 +607,16 @@ function mapTheory(article: ApiTheory) {
     format,
     icon: article.icon || '📚',
     desc: article.description || '',
-    content: article.content,
+    content: legacyFile ? '' : article.content,
+    fileData: legacyFile ? article.content : undefined,
+    attachments: (article.attachments || []).map((item) => ({
+      id: String(item.id),
+      kind: item.kind,
+      url: item.url || undefined,
+      name: item.original_name,
+      mimeType: item.mime_type || undefined,
+      size: item.size_bytes ?? undefined,
+    })),
   }
 }
 
@@ -579,7 +624,7 @@ function mapStudent(student: ApiStudent) {
   return {
     id: String(student.id),
     username: student.username,
-    password: student.temporary_password || '',
+    password: '',
     role: 'student' as const,
     fullName: student.full_name,
     classId: student.class_id === null ? undefined : String(student.class_id),
@@ -587,6 +632,7 @@ function mapStudent(student: ApiStudent) {
     schoolName: student.school_name || undefined,
     isClassStudent: student.class_id !== null,
     isActive: student.is_active,
+    mustChangePassword: Boolean(student.must_change_password),
   }
 }
 

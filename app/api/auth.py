@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.rate_limit import check_login_rate
 from app.core.security import utcnow
 from app.database.session import get_db
-from app.dependencies.auth import get_current_session, get_current_user
+from app.dependencies.auth import get_current_session, get_current_user_allow_pending
 from app.models.auth_session import AuthSession
 from app.models.user import User
 from app.schemas.user import PasswordChangeRequest, RefreshRequest, RegisterRequest, Token, UserResponse
@@ -40,7 +40,7 @@ def refresh(request: RefreshRequest, response: Response, db: Session = Depends(g
 
 
 @router.post("/logout", status_code=204)
-def logout(db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+def logout(db: Session = Depends(get_db), current_user: User = Depends(get_current_user_allow_pending),
            session: AuthSession = Depends(get_current_session)):
     session.revoked_at = utcnow()
     db.flush()
@@ -48,12 +48,12 @@ def logout(db: Session = Depends(get_db), current_user: User = Depends(get_curre
 
 
 @router.get("/me", response_model=UserResponse)
-def me(current_user: User = Depends(get_current_user)):
+def me(current_user: User = Depends(get_current_user_allow_pending)):
     return current_user
 
 
 @router.put("/password", status_code=204)
 def update_password(request: PasswordChangeRequest, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(get_current_user_allow_pending)):
     change_password(db, current_user.id, request.current_password, request.new_password)
     return Response(status_code=204)

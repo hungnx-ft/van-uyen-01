@@ -12,11 +12,22 @@ export interface User {
   schoolName?: string
   isClassStudent?: boolean
   isActive?: boolean
+  /** Set while the account still uses a teacher-issued default password. */
+  mustChangePassword?: boolean
 }
 export interface SchoolClass {
   id: string
   name: string
   year: string
+}
+export interface TheoryAttachment {
+  id: string
+  kind: 'image' | 'file' | 'link'
+  /** Links only. */
+  url?: string
+  name: string
+  mimeType?: string
+  size?: number
 }
 export interface TheoryArticle {
   id: string
@@ -28,7 +39,9 @@ export interface TheoryArticle {
   icon: string
   desc: string
   content: string
+  /** Legacy single-format posts keep their image/pdf/link value here. */
   fileData?: string
+  attachments?: TheoryAttachment[]
 }
 export interface Question {
   id?: string

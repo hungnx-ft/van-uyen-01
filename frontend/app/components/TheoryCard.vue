@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TheoryArticle } from '~/types'
+import { contentSummary } from '~/utils/theory'
 defineProps<{ article: TheoryArticle; teacher: boolean }>()
 defineEmits<{ open: []; edit: []; remove: [] }>()
 </script>
@@ -20,11 +21,13 @@ defineEmits<{ open: []; edit: []; remove: [] }>()
             ? 'Bài tham khảo'
             : 'Chia sẻ kinh nghiệm'
       }}
-      | {{ article.format }}
     </div>
     <span class="card-icon">{{ article.icon }}</span>
     <h3 class="card-title mt-2">{{ article.title }}</h3>
     <p class="card-desc">{{ article.desc }}</p>
+    <p v-if="contentSummary(article)" class="card-desc text-light" style="font-size: 0.85rem">
+      {{ contentSummary(article) }}
+    </p>
     <template v-if="teacher && article.type !== 'core'">
       <div class="theory-actions">
         <button class="btn btn-outline btn-sm" @click.stop="$emit('edit')">Sửa bài</button>

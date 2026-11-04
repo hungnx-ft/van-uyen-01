@@ -3,64 +3,59 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.dependencies.auth import get_current_teacher
-from app.dependencies.permissions import managed_student
+from app.dependencies.permissions import managed_student, owned_class
 from app.models.user import User
 from app.schemas.student import (BulkStudentCreate, BulkStudentFailure, BulkStudentResult,
                                  StudentCreate, StudentCredentials, StudentPage, StudentResponse,
                                  StudentStatus, StudentUpdate)
-from app.schemas.user import UserResponse, UserUpdate
 from app.services.student import change_student_status, delete_student, list_students, update_student
-from app.services.user import create_student_credentials, reset_password, reset_student_credentials
+from app.services.user import DEFAULT_STUDENT_PASSWORD, create_student, reset_password
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 
 router = APIRouter()
 
 
+def _credentials(student: User) -> StudentCredentials:
+    return StudentCredentials(**StudentResponse.model_validate(student).model_dump(),
+                              temporary_password=DEFAULT_STUDENT_PASSWORD)
+
+
+def _no_store(response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+
+
 @router.post("/students", response_model=StudentCredentials, status_code=201)
 def create_new_student(student_in: StudentCreate, response: Response,
                        db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
-    student, password = create_student_credentials(db, student_in, current_user.id)
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
-    return StudentCredentials(
-        **StudentResponse.model_validate(student).model_dump(), temporary_password=password
-    )
+    student = create_student(db, student_in, current_user.id)
+    _no_store(response)
+    return _credentials(student)
 
 
 @router.post("/students/bulk", response_model=BulkStudentResult, status_code=201)
 def create_students_bulk(request: BulkStudentCreate, response: Response,
                          db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
-    # Validate the destination once, then isolate each row so one duplicate
+    # Validate the destination once, then isolate each row so one bad row
     # does not prevent the rest of the spreadsheet from being imported.
-    from app.dependencies.permissions import owned_class
     owned_class(db, request.class_id, current_user.id, require_active=True)
     created: list[StudentCredentials] = []
     failed: list[BulkStudentFailure] = []
     for row, item in enumerate(request.students, start=2):
         try:
             with db.begin_nested():
-                student, password = create_student_credentials(
+                student = create_student(
                     db,
-                    StudentCreate(
-                        username=item.username or f"student_{row}",
-                        password=item.password,
-                        full_name=item.full_name,
-                        school_name=item.school_name,
-                        class_id=request.class_id,
-                        role="Student",
-                    ),
+                    StudentCreate(full_name=item.full_name, school_name=item.school_name,
+                                  class_id=request.class_id),
                     current_user.id,
                 )
-                created.append(StudentCredentials(
-                    **StudentResponse.model_validate(student).model_dump(),
-                    temporary_password=password,
-                ))
+                created.append(_credentials(student))
         except (HTTPException, IntegrityError, ValueError) as exc:
             detail = exc.detail if isinstance(exc, HTTPException) else str(exc)
-            failed.append(BulkStudentFailure(row=row, username=item.username, detail=str(detail)))
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
+            failed.append(BulkStudentFailure(row=row, full_name=item.full_name, detail=str(detail)))
+    _no_store(response)
     return BulkStudentResult(created=created, failed=failed)
 
 
@@ -96,18 +91,11 @@ def remove_student(student_id: int, db: Session = Depends(get_db), current_user:
     return Response(status_code=204)
 
 
-@router.put("/students/{student_id}/password", response_model=UserResponse)
-def reset_student_password(student_id: int, user_in: UserUpdate, db: Session = Depends(get_db),
-                           current_user: User = Depends(get_current_teacher)):
-    return reset_password(db, student_id=student_id, new_password=user_in.password, teacher_id=current_user.id)
-
-
+@router.put("/students/{student_id}/password", response_model=StudentCredentials)
 @router.post("/students/{student_id}/password/reset", response_model=StudentCredentials)
-def generate_student_password(student_id: int, response: Response,
-                              db: Session = Depends(get_db), current_user: User = Depends(get_current_teacher)):
-    student, password = reset_student_credentials(db, student_id, current_user.id)
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
-    return StudentCredentials(
-        **StudentResponse.model_validate(student).model_dump(), temporary_password=password
-    )
+def reset_student_password(student_id: int, response: Response, db: Session = Depends(get_db),
+                           current_user: User = Depends(get_current_teacher)):
+    """Reset to the default password; the student must change it at next login."""
+    student = reset_password(db, student_id=student_id, teacher_id=current_user.id)
+    _no_store(response)
+    return _credentials(student)

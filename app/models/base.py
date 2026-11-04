@@ -1,7 +1,7 @@
 from app.database.session import Base
 from app.models.user import User
 from app.models.class_ import Class
-from app.models.theory import TheoryArticle
+from app.models.theory import TheoryArticle, TheoryAttachment
 from app.models.exam import PracticeExam, PracticeQuestion, MockExam, MockQuestion
 from app.models.submission import Submission, SubmissionAnswer, SubmissionScore
 from app.models.assignment import Assignment

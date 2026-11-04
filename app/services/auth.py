@@ -62,6 +62,9 @@ def change_password(db: Session, user_id: int, current_password: str, new_passwo
     user = db.query(User).filter(User.id == user_id).with_for_update().populate_existing().one()
     if not verify_password(current_password, user.password_hash):
         raise HTTPException(400, "Current password is incorrect")
+    if new_password == current_password:
+        raise HTTPException(400, "New password must differ from the current password")
     user.password_hash = get_password_hash(new_password)
+    user.must_change_password = False
     revoke_all_sessions(db, user_id)
     db.flush()

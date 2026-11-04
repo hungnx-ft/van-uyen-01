@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { duration, newQuestions, totalScore, gradeTotal, clockText } from '../../app/utils/exams'
+import {
+  duration,
+  newQuestions,
+  totalScore,
+  gradeTotal,
+  clockText,
+  formatScore,
+  MAX_QUESTION_SCORE,
+} from '../../app/utils/exams'
 import { readDatabase, saveTable } from '../../app/utils/storage'
 import type { Exam, ExamType, Result } from '../../app/types'
 
@@ -94,5 +102,31 @@ describe('legacy browser storage', () => {
     s.setItem('vu_results', 'broken JSON')
     expect(() => readDatabase(s)).toThrow()
     expect(s.getItem('vu_results')).toBe('broken JSON')
+  })
+})
+
+describe('custom question scores', () => {
+  const exam = (scores: number[]): Exam => ({
+    id: 'custom',
+    title: 'Đề',
+    targetGroup: 'doc-hieu',
+    passage: '',
+    questions: scores.map((score) => ({ q: 'Câu', a: '', score })),
+  })
+  it('sums per-question scores without float noise', () => {
+    expect(totalScore(exam([0.1, 0.2]))).toBe(0.3)
+    expect(totalScore(exam([0.8, 0.8, 0.8, 0.8, 0.8, 2, 4]))).toBe(10)
+    expect(totalScore(exam([1.25, 3.5, 0.05]))).toBe(4.8)
+  })
+  it('treats an emptied score input as zero', () => {
+    expect(totalScore(exam([2, '' as unknown as number, Number.NaN]))).toBe(2)
+  })
+  it('formats scores to two decimals', () => {
+    expect(formatScore(1.234)).toBe(1.23)
+    expect(formatScore(0.1 + 0.2)).toBe(0.3)
+    expect(formatScore(Number.NaN)).toBe(0)
+  })
+  it('keeps scores at the backend maximum', () => {
+    expect(MAX_QUESTION_SCORE).toBe(20)
   })
 })

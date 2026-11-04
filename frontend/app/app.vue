@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { tables, versionKey } from '~/utils/storage'
 const { ready, error, initialize, refresh } = useDatabase(),
-  { restore, user, isTeacher, authReady } = useAuth()
+  { restore, user, isTeacher, authReady, mustChangePassword } = useAuth()
 const route = useRoute(),
   { state, close } = useWorkspace()
 const mounted = ref(false)
@@ -41,7 +41,8 @@ watchEffect(() => {
   <NuxtPage v-if="statusPage" />
   <StorageError v-else-if="error" :message="error" @retry="retry" />
   <template v-else-if="mounted && ready && authReady">
-    <AppShell v-if="user"><NuxtPage /></AppShell>
+    <ForcePasswordChange v-if="user && mustChangePassword" />
+    <AppShell v-else-if="user"><NuxtPage /></AppShell>
     <NuxtPage v-else />
     <ExamWorkspace
       v-if="state"

@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, CheckConstraint, Column, Integer, String, DateTime, ForeignKey, true
+from sqlalchemy import Boolean, CheckConstraint, Column, Integer, String, DateTime, ForeignKey, false, true
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database.session import Base
@@ -14,6 +14,8 @@ class User(Base):
     full_name = Column(String(200), nullable=False)
     school_name = Column(String(200), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True, server_default=true())
+    # Set when the account holds a teacher-issued default password.
+    must_change_password = Column(Boolean, nullable=False, default=False, server_default=false())
     __table_args__ = (CheckConstraint("role IN ('Teacher', 'Student')", name="ck_users_role"),)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
